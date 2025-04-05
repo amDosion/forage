@@ -21,7 +21,7 @@ RUN echo -e "🔧 开始安装系统依赖和 CUDA 开发工具...\n" && \
         libglib2.0-0 libsm6 libxrender1 libxext6 \
         xvfb build-essential cmake bc \
         libgoogle-perftools-dev \
-        apt-transport-https htop nano bsdmainutils \
+        apt-transport-https htop nano bsdmainutils bsdextrautils \
         lsb-release software-properties-common && \
     # 添加 jq（用于处理 JSON）
     apt-get install -y jq && \
