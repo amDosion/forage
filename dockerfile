@@ -14,6 +14,7 @@ RUN echo "🔧 正在设置时区为 $TZ..." && \
 # ===============================
 RUN echo -e "🔧 开始安装系统依赖和 CUDA 开发工具...\n" && \
     apt-get update && apt-get upgrade -y && \
+    apt-get install -y jq && \
     apt-get install -y --no-install-recommends \
         wget git git-lfs curl procps \
         libgl1 libgl1-mesa-glx libglvnd0 \
