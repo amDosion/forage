@@ -92,7 +92,7 @@ if [ "$UI" = "auto" ]; then
   REPO="https://github.com/AUTOMATIC1111/stable-diffusion-webui.git"
 elif [ "$UI" = "forge" ]; then
   TARGET_DIR="/app/webui/sd-webui-forge"
-  REPO="https://github.com/amDosion/stable-diffusion-webui-forge-cuda128.git"
+  REPO="https://github.com/amDosion/stable-diffusion-webui-fastforge.git"
 else
   echo "❌ Unknown UI: $UI"
   exit 1
