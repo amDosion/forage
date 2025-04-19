@@ -163,15 +163,6 @@ grep -E '^(xformers|diffusers|transformers|torchdiffeq|torchsde|GitPython|protob
 cd "$TARGET_DIR"
 chmod -R 777 .
 
-echo "🐍 [6] 虚拟环境检查..."
-if [ ! -x "venv/bin/activate" ]; then
-  echo "📦 创建 venv..."
-  python3 -m venv venv
-fi
-
-# 激活虚拟环境
-source venv/bin/activate
-
 echo "📥 升级 pip..."
 pip install --upgrade pip | tee -a "$LOG_FILE"
 
@@ -266,9 +257,6 @@ else
   echo "⚠️ 未检测到 AVX2 → fallback 到 tensorflow-cpu==2.19.0"
   pip install tensorflow-cpu==2.19.0
 fi
-
-
-deactivate
 
 # ---------------------------------------------------
 # 安装完成日志
@@ -417,19 +405,8 @@ echo "🚀 [11] 所有准备就绪，使用 venv 启动 webui.sh ..."
 # 设置跳过 Forge 环境流程的参数，并合并用户自定义参数
 export COMMANDLINE_ARGS="--skip-install --skip-prepare-environment --skip-python-version-check --skip-torch-cuda-test $ARGS"
 
-# 激活你的虚拟环境
-source "$TARGET_DIR/venv/bin/activate"
-
-# 验证当前 Python 是不是 venv 的
-echo "🐍 当前 Python 路径: $(which python)"
-echo "📂 应使用的 Python 路径: $(realpath "$TARGET_DIR/venv/bin/python")"
-
 # 验证启动参数
 echo "🧠 COMMANDLINE_ARGS = $COMMANDLINE_ARGS"
 
-# 输出当前激活的 pip 安装路径（site-packages）
-echo "📦 当前 site-packages 路径:"
-python -c 'import site; print("\n".join(site.getsitepackages()))'
-
-# 启动 WebUI
+echo "🚀 [11] 所有准备就绪，启动 webui.sh ..."
 exec bash "$TARGET_DIR/webui.sh"
