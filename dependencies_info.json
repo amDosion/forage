@@ -112,7 +112,7 @@
     "description": "Stable Diffusion 推理加速工具（Token Merging）"
   },
   "torch": {
-    "version": "2.6.0+cu126,
+    "version": "2.6.0+cu126",
     "description": "PyTorch 主框架，自动根据 TORCH_COMMAND 或系统默认设置安装"
   },
   "torchdiffeq": {
