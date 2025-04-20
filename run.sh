@@ -78,15 +78,49 @@ ARGS="${ARGS:---xformers --api --listen --enable-insecure-extension-access --the
 echo "🧠 UI=${UI}"
 echo "🧠 ARGS=${ARGS}"
 
-echo "🔧 [2] 解析下载开关环境变量..."
+echo "🔧 [2] 解析下载开关环境变量 (默认全部启用)..."
+# 解析全局下载开关
 ENABLE_DOWNLOAD_ALL="${ENABLE_DOWNLOAD:-true}"
-ENABLE_DOWNLOAD_MODELS="${ENABLE_DOWNLOAD_MODELS:-$ENABLE_DOWNLOAD_ALL}"
+
+# 解析独立的模型和资源类别开关
 ENABLE_DOWNLOAD_EXTS="${ENABLE_DOWNLOAD_EXTS:-$ENABLE_DOWNLOAD_ALL}"
-ENABLE_DOWNLOAD_CONTROLNET="${ENABLE_DOWNLOAD_CONTROLNET:-$ENABLE_DOWNLOAD_ALL}"
+ENABLE_DOWNLOAD_MODEL_SD15="${ENABLE_DOWNLOAD_MODEL_SD15:-$ENABLE_DOWNLOAD_ALL}"
+ENABLE_DOWNLOAD_MODEL_SDXL="${ENABLE_DOWNLOAD_MODEL_SDXL:-$ENABLE_DOWNLOAD_ALL}"
+ENABLE_DOWNLOAD_MODEL_FLUX="${ENABLE_DOWNLOAD_MODEL_FLUX:-$ENABLE_DOWNLOAD_ALL}"
+ENABLE_DOWNLOAD_VAE_FLUX="${ENABLE_DOWNLOAD_VAE_FLUX:-$ENABLE_DOWNLOAD_ALL}"
+ENABLE_DOWNLOAD_TE_FLUX="${ENABLE_DOWNLOAD_TE_FLUX:-$ENABLE_DOWNLOAD_ALL}"
+ENABLE_DOWNLOAD_CNET_SD15="${ENABLE_DOWNLOAD_CNET_SD15:-$ENABLE_DOWNLOAD_ALL}"
+ENABLE_DOWNLOAD_CNET_SDXL="${ENABLE_DOWNLOAD_CNET_SDXL:-$ENABLE_DOWNLOAD_ALL}"
+ENABLE_DOWNLOAD_CNET_FLUX="${ENABLE_DOWNLOAD_CNET_FLUX:-$ENABLE_DOWNLOAD_ALL}"
 ENABLE_DOWNLOAD_VAE="${ENABLE_DOWNLOAD_VAE:-$ENABLE_DOWNLOAD_ALL}"
-ENABLE_DOWNLOAD_TEXT_ENCODERS="${ENABLE_DOWNLOAD_TEXT_ENCODERS:-$ENABLE_DOWNLOAD_ALL}"
-ENABLE_DOWNLOAD_TRANSFORMERS="${ENABLE_DOWNLOAD_TRANSFORMERS:-$ENABLE_DOWNLOAD_ALL}"
-echo "✅ DOWNLOAD_FLAGS: MODELS=$ENABLE_DOWNLOAD_MODELS, EXTS=$ENABLE_DOWNLOAD_EXTS"
+ENABLE_DOWNLOAD_LORAS="${ENABLE_DOWNLOAD_LORAS:-$ENABLE_DOWNLOAD_ALL}"
+ENABLE_DOWNLOAD_EMBEDDINGS="${ENABLE_DOWNLOAD_EMBEDDINGS:-$ENABLE_DOWNLOAD_ALL}"
+ENABLE_DOWNLOAD_UPSCALERS="${ENABLE_DOWNLOAD_UPSCALERS:-$ENABLE_DOWNLOAD_ALL}"
+
+# 解析独立的镜像使用开关
+USE_HF_MIRROR="${USE_HF_MIRROR:-false}" # 控制是否使用 hf-mirror.com
+USE_GIT_MIRROR="${USE_GIT_MIRROR:-false}" # 控制是否使用 gitcode.net
+
+echo "  - 下载总开关        (ENABLE_DOWNLOAD_ALL): ${ENABLE_DOWNLOAD_ALL}"
+echo "  - 下载 Extensions   (ENABLE_DOWNLOAD_EXTS): ${ENABLE_DOWNLOAD_EXTS}"
+echo "  - 下载 Checkpoint SD1.5 (ENABLE_DOWNLOAD_MODEL_SD15): ${ENABLE_DOWNLOAD_MODEL_SD15}"
+echo "  - 下载 Checkpoint SDXL  (ENABLE_DOWNLOAD_MODEL_SDXL): ${ENABLE_DOWNLOAD_MODEL_SDXL}"
+echo "  - 下载 Checkpoint FLUX (ENABLE_DOWNLOAD_MODEL_FLUX): ${ENABLE_DOWNLOAD_MODEL_FLUX}"
+echo "  - 下载 VAE FLUX       (ENABLE_DOWNLOAD_VAE_FLUX): ${ENABLE_DOWNLOAD_VAE_FLUX}"
+echo "  - 下载 TE FLUX        (ENABLE_DOWNLOAD_TE_FLUX): ${ENABLE_DOWNLOAD_TE_FLUX}"
+echo "  - 下载 ControlNet SD1.5 (ENABLE_DOWNLOAD_CNET_SD15): ${ENABLE_DOWNLOAD_CNET_SD15}"
+echo "  - 下载 ControlNet SDXL  (ENABLE_DOWNLOAD_CNET_SDXL): ${ENABLE_DOWNLOAD_CNET_SDXL}"
+echo "  - 下载 ControlNet FLUX  (ENABLE_DOWNLOAD_CNET_FLUX): ${ENABLE_DOWNLOAD_CNET_FLUX}"
+echo "  - 下载 通用 VAE     (ENABLE_DOWNLOAD_VAE): ${ENABLE_DOWNLOAD_VAE}"
+echo "  - 下载 LoRAs/LyCORIS (ENABLE_DOWNLOAD_LORAS): ${ENABLE_DOWNLOAD_LORAS}"
+echo "  - 下载 Embeddings   (ENABLE_DOWNLOAD_EMBEDDINGS): ${ENABLE_DOWNLOAD_EMBEDDINGS}"
+echo "  - 下载 Upscalers    (ENABLE_DOWNLOAD_UPSCALERS): ${ENABLE_DOWNLOAD_UPSCALERS}"
+echo "  - 是否使用 HF 镜像  (USE_HF_MIRROR): ${USE_HF_MIRROR}" # (hf-mirror.com)
+echo "  - 是否使用 Git 镜像 (USE_GIT_MIRROR): ${USE_GIT_MIRROR}" # (gitcode.net)
+
+# 预定义镜像地址 (如果需要可以从环境变量读取，但简单起见先硬编码)
+HF_MIRROR_URL="https://hf-mirror.com"
+GIT_MIRROR_URL="https://gitcode.net" # 使用 https
 
 export NO_TCMALLOC=1
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu126"
@@ -119,6 +153,46 @@ else
   git clone "$REPO" "$TARGET_DIR"
   chmod +x "$TARGET_DIR/webui.sh"
 fi
+
+# 创建 repositories 目录（如果不存在的话）
+mkdir -p repositories || echo "⚠️ 创建 repositories 目录失败，请检查权限。"
+
+# 克隆 stable-diffusion-webui-assets 仓库（如果尚未克隆）
+REPO_ASSETS_DIR="repositories/stable-diffusion-webui-assets"
+if [ ! -d "$REPO_ASSETS_DIR" ]; then
+  echo "🚀 克隆 stable-diffusion-webui-assets 仓库..."
+  git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui-assets.git "$REPO_ASSETS_DIR" || echo "❌ 克隆 stable-diffusion-webui-assets 仓库失败"
+else
+  echo "✅ stable-diffusion-webui-assets 仓库已经存在，跳过克隆。"
+fi
+
+# 克隆 huggingface_guess 仓库（如果尚未克隆）
+REPO_HUGGINGFACE_GUESS_DIR="repositories/huggingface_guess"
+if [ ! -d "$REPO_HUGGINGFACE_GUESS_DIR" ]; then
+  echo "🚀 克隆 huggingface_guess 仓库..."
+  git clone https://github.com/lllyasviel/huggingface_guess.git "$REPO_HUGGINGFACE_GUESS_DIR" || echo "❌ 克隆 huggingface_guess 仓库失败"
+else
+  echo "✅ huggingface_guess 仓库已经存在，跳过克隆。"
+fi
+
+# 克隆 BLIP 仓库（如果尚未克隆）
+REPO_BLIP_DIR="repositories/BLIP"
+if [ ! -d "$REPO_BLIP_DIR" ]; then
+  echo "🚀 克隆 BLIP 仓库..."
+  git clone https://github.com/salesforce/BLIP.git "$REPO_BLIP_DIR" || echo "❌ 克隆 BLIP 仓库失败"
+else
+  echo "✅ BLIP 仓库已经存在，跳过克隆。"
+fi
+
+# 克隆 google_blockly_prototypes 仓库（如果尚未克隆）
+REPO_GOOGLE_BLOCKLY_DIR="repositories/google_blockly_prototypes"
+if [ ! -d "$REPO_GOOGLE_BLOCKLY_DIR" ]; then
+  echo "🚀 克隆 google_blockly_prototypes 仓库..."
+  git clone https://github.com/lllyasviel/google_blockly_prototypes.git "$REPO_GOOGLE_BLOCKLY_DIR" || echo "❌ 克隆 google_blockly_prototypes 仓库失败"
+else
+  echo "✅ google_blockly_prototypes 仓库已经存在，跳过克隆。"
+fi
+
 
 # ---------------------------------------------------
 # requirements_versions.txt 修复
@@ -224,6 +298,30 @@ if [[ "$ENABLE_DOWNLOAD_TRANSFORMERS" == "true" ]]; then
   pip install transformers accelerate diffusers | tee -a "$LOG_FILE"
 fi
 
+# 自动检查并安装缺失的库
+check_and_install_package() {
+    local package=$1
+    if ! python -c "import $package" >/dev/null 2>&1; then
+        echo "❌ 缺少库: $package，尝试安装..."
+        pip install "$package" --no-cache-dir && echo "✅ 库安装成功: $package" || echo "❌ 库安装失败: $package"
+    else
+        echo "✅ 库已安装: $package"
+    fi
+}
+
+# 安装缺失的依赖
+check_and_install_package "sentencepiece"
+check_and_install_package "send2trash"
+check_and_install_package "beautifulsoup4"
+check_and_install_package "ZipUnicode"
+check_and_install_package "litelama"
+check_and_install_package "timm"
+check_and_install_package "insightface"
+check_and_install_package "huggingface_guess"
+check_and_install_package "repositories"
+check_and_install_package "python-dotenv"
+
+
 # ---------------------------------------------------
 # 安装 TensorFlow
 # ---------------------------------------------------
@@ -242,15 +340,15 @@ if [[ -n "$AVX2_SUPPORTED" ]]; then
 
   if command -v nvidia-smi &>/dev/null; then
     echo "🧠 检测到 GPU，尝试安装 TensorFlow GPU 版本（支持 Python 3.11）"
-    pip install tensorflow==2.19.0 | tee -a "$LOG_FILE"
+    pip install tf-nightly | tee -a "$LOG_FILE"  # 使用 tf-nightly 替代 tensorflow==2.19.0
 
     # 输出详细的GPU信息
     echo "🔧 获取 GPU 详细信息..."
     nvidia-smi | tee -a "$LOG_FILE"
     
   else
-    echo "🧠 未检测到 GPU，安装 tensorflow-cpu==2.19.0（兼容 Python 3.11）"
-    pip install tensorflow-cpu==2.19.0 | tee -a "$LOG_FILE"
+    echo "🧠 未检测到 GPU，安装 tf-nightly（兼容 Python 3.11）"
+    pip install tf-nightly | tee -a "$LOG_FILE"  # 使用 tf-nightly 替代 tensorflow-cpu==2.19.0
   fi
 
   echo "🧪 验证 TensorFlow 是否识别 GPU："
@@ -262,8 +360,8 @@ if [[ -n "$AVX2_SUPPORTED" ]]; then
     exit(0)" || echo "⚠️ TensorFlow 未能识别 GPU，请确认驱动与 CUDA 库完整"
 
 else
-  echo "⚠️ 未检测到 AVX2 → fallback 到 tensorflow-cpu==2.19.0"
-  pip install tensorflow-cpu==2.19.0
+  echo "⚠️ 未检测到 AVX2 → fallback 到安装 tf-nightly（兼容 Python 3.11）"
+  pip install tf-nightly  # 使用 tf-nightly 替代 tensorflow-cpu==2.19.0
 fi
 
 # ---------------------------------------------------
@@ -306,69 +404,235 @@ should_skip() {
   return 1
 }
 
-# ---------------------------------------------------
-# 下载资源
-# ---------------------------------------------------
-echo "📦 [9] 加载资源资源列表..."
-RESOURCE_PATH="/app/webui/resources.txt"
-mkdir -p /app/webui
+# ==================================================
+# 资源下载 (使用 resources.txt)
+# ==================================================
+echo "📦 [9] 处理资源下载 (基于 /app/webui/resources.txt 和下载开关)..."
+RESOURCE_PATH="/app/webui/resources.txt" # 定义资源列表文件路径
 
+# 检查资源文件是否存在，如果不存在则尝试下载默认版本
 if [ ! -f "$RESOURCE_PATH" ]; then
-  echo "📥 下载默认 resources.txt..."
-  curl -fsSL -o "$RESOURCE_PATH" https://raw.githubusercontent.com/chuan1127/SD-webui-forge/main/resources.txt
+  # 指定默认资源文件的 URL
+  DEFAULT_RESOURCE_URL="https://raw.githubusercontent.com/chuan1127/SD-webui-forge/main/resources.txt"
+  echo "  - 未找到本地 resources.txt，尝试从 ${DEFAULT_RESOURCE_URL} 下载..."
+  # 使用 curl 下载，确保失败时不输出错误页面 (-f)，静默 (-s)，跟随重定向 (-L)
+  curl -fsSL -o "$RESOURCE_PATH" "$DEFAULT_RESOURCE_URL"
+  if [ $? -eq 0 ]; then
+      echo "  - ✅ 默认 resources.txt 下载成功。"
+  else
+      echo "  - ❌ 下载默认 resources.txt 失败。请手动将资源文件放在 ${RESOURCE_PATH} 或检查网络/URL。"
+      # 创建一个空文件以避免后续读取错误，但不会下载任何内容
+      touch "$RESOURCE_PATH"
+      echo "  - 已创建空的 resources.txt 文件以继续，但不会下载任何资源。"
+  fi
 else
-  echo "✅ 使用本地 resources.txt"
+  echo "  - ✅ 使用本地已存在的 resources.txt: ${RESOURCE_PATH}"
 fi
 
+# 定义函数：克隆或更新 Git 仓库 (支持独立 Git 镜像开关)
 clone_or_update_repo() {
-  local dir="$1"; local repo="$2"
-  if [ -d "$dir/.git" ]; then
-    echo "🔁 更新 $dir"
-    git -C "$dir" pull --ff-only || echo "⚠️ Git update failed: $dir"
-  elif [ ! -d "$dir" ]; then
-    echo "📥 克隆 $repo → $dir"
-    git clone --depth=1 "$repo" "$dir"
-  fi
+    # $1: 目标目录, $2: 原始仓库 URL
+    local dir="$1" repo_original="$2"
+    local dirname
+    local repo_url # URL to be used for cloning/pulling
+
+    dirname=$(basename "$dir")
+
+    # 检查是否启用了 Git 镜像以及是否是 GitHub URL
+    if [[ "$USE_GIT_MIRROR" == "true" && "$repo_original" == "https://github.com/"* ]]; then
+        local git_mirror_host
+        git_mirror_host=$(echo "$GIT_MIRROR_URL" | sed 's|https://||; s|http://||; s|/.*||')
+        repo_url=$(echo "$repo_original" | sed "s|github.com|$git_mirror_host|")
+        echo "    - 使用镜像转换 (Git): $repo_original -> $repo_url"
+    else
+        repo_url="$repo_original"
+    fi
+
+    # 检查扩展下载开关
+    if [[ "$ENABLE_DOWNLOAD_EXTS" != "true" ]]; then
+        if [ -d "$dir" ]; then
+            echo "    - ⏭️ 跳过更新扩展/仓库 (ENABLE_DOWNLOAD_EXTS=false): $dirname"
+        else
+            echo "    - ⏭️ 跳过克隆扩展/仓库 (ENABLE_DOWNLOAD_EXTS=false): $dirname"
+        fi
+        return
+    fi
+
+    # 尝试更新或克隆
+    if [ -d "$dir/.git" ]; then
+        echo "    - 🔄 更新扩展/仓库: $dirname (from $repo_url)"
+        (cd "$dir" && git pull --ff-only) || echo "      ⚠️ Git pull 失败: $dirname (可能存在本地修改或网络问题)"
+    elif [ ! -d "$dir" ]; then
+        echo "    - 📥 克隆扩展/仓库: $repo_url -> $dirname (完整克隆)"
+        git clone --recursive "$repo_url" "$dir" || echo "      ❌ Git clone 失败: $dirname (检查 URL: $repo_url 和网络)"
+    else
+        echo "    - ✅ 目录已存在但非 Git 仓库，跳过 Git 操作: $dirname"
+    fi  # ✅ 这里是必须的
 }
 
+# 定义函数：下载文件 (支持独立 HF 镜像开关)
 download_with_progress() {
-  local output="$1"; local url="$2"
-  if [ ! -f "$output" ]; then
-    echo "⬇️ 下载: $output"
-    mkdir -p "$(dirname "$output")"
-    wget --show-progress -O "$output" "$url"
-  else
-    echo "✅ 已存在: $output"
-  fi
+    # $1: 输出路径, $2: 原始 URL, $3: 资源类型描述, $4: 对应的下载开关变量值
+    local output_path="$1" url_original="$2" type="$3" enabled_flag="$4"
+    local filename
+    local download_url # URL to be used for downloading
+
+    filename=$(basename "$output_path")
+
+    # 检查下载开关
+    if [[ "$enabled_flag" != "true" ]]; then
+        echo "    - ⏭️ 跳过下载 ${type} (开关 '$enabled_flag' != 'true'): $filename"
+        return
+    fi
+    # 检查网络
+    if [[ "$NET_OK" != "true" ]]; then
+        echo "    - ❌ 跳过下载 ${type} (网络不通): $filename"
+        return
+    fi
+
+    # 检查是否启用了 HF 镜像以及是否是 Hugging Face URL
+    # 使用步骤 [2] 中定义的 HF_MIRROR_URL
+    if [[ "$USE_HF_MIRROR" == "true" && "$url_original" == "https://huggingface.co/"* ]]; then
+        # 替换 huggingface.co 为镜像地址
+        download_url=$(echo "$url_original" | sed "s|https://huggingface.co|$HF_MIRROR_URL|")
+        echo "    - 使用镜像转换 (HF): $url_original -> $download_url"
+    else
+        # 使用原始 URL
+        download_url="$url_original"
+    fi
+
+    # 检查文件是否已存在
+    if [ ! -f "$output_path" ]; then
+        echo "    - ⬇️ 下载 ${type}: $filename (from $download_url)"
+        mkdir -p "$(dirname "$output_path")"
+        # 执行下载
+        wget --progress=bar:force:noscroll --timeout=120 -O "$output_path" "$download_url"
+        # 检查结果
+        if [ $? -ne 0 ]; then
+            echo "      ❌ 下载失败: $filename from $download_url (检查 URL 或网络)"
+            rm -f "$output_path"
+        else
+            echo "      ✅ 下载完成: $filename"
+        fi
+    else
+        echo "    - ✅ 文件已存在，跳过下载 ${type}: $filename"
+    fi
 }
 
-while IFS=, read -r dir url; do
-  [[ "$dir" =~ ^#.*$ || -z "$dir" ]] && continue
-  if should_skip "$dir"; then
-    echo "⛔ 跳过黑名单插件: $dir"
-    continue
+# 定义插件/目录黑名单 (示例)
+SKIP_DIRS=(
+  "extensions/stable-diffusion-aws-extension" # 示例：跳过 AWS 插件
+  "extensions/sd_dreambooth_extension"     # 示例：跳过 Dreambooth (如果需要单独管理)
+)
+# 函数：检查目标路径是否应跳过
+should_skip() {
+  local dir_to_check="$1"
+  for skip_dir in "${SKIP_DIRS[@]}"; do
+    # 完全匹配路径
+    if [[ "$dir_to_check" == "$skip_dir" ]]; then
+      return 0 # 0 表示应该跳过 (Bash true)
+    fi
+  done
+  return 1 # 1 表示不应该跳过 (Bash false)
+}
+
+echo "  - 开始处理 resources.txt 中的条目..."
+# 逐行读取 resources.txt 文件 (逗号分隔: 目标路径,源URL)
+while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
+  # 清理路径和 URL 的前后空格
+  target_path=$(echo "$target_path" | xargs)
+  source_url=$(echo "$source_url" | xargs)
+
+  # 跳过注释行 (# 开头) 或空行 (路径或 URL 为空)
+  [[ "$target_path" =~ ^#.*$ || -z "$target_path" || -z "$source_url" ]] && continue
+
+  # 检查是否在黑名单中
+  if should_skip "$target_path"; then
+    echo "    - ⛔ 跳过黑名单条目: $target_path"
+    continue # 处理下一行
   fi
-  case "$dir" in
+
+
+# 根据目标路径判断资源类型并调用相应下载函数及正确的独立开关
+case "$target_path" in
+    # 1. Extensions
     extensions/*)
-      [[ "$ENABLE_DOWNLOAD_EXTS" == "true" ]] && clone_or_update_repo "$dir" "$url"
-      ;;
-    models/ControlNet/*)
-      [[ "$ENABLE_DOWNLOAD_CONTROLNET" == "true" && "$NET_OK" == "true" ]] && download_with_progress "$dir" "$url"
-      ;;
-    models/VAE/*)
-      [[ "$ENABLE_DOWNLOAD_VAE" == "true" && "$NET_OK" == "true" ]] && download_with_progress "$dir" "$url"
-      ;;
+        clone_or_update_repo "$target_path" "$source_url" # Uses ENABLE_DOWNLOAD_EXTS internally
+        ;;
+
+    # 2. Stable Diffusion Checkpoints
+    models/Stable-diffusion/SD1.5/*)
+        download_with_progress "$target_path" "$source_url" "SD 1.5 Checkpoint" "$ENABLE_DOWNLOAD_MODEL_SD15"
+        ;;
+    models/Stable-diffusion/XL/*)
+        download_with_progress "$target_path" "$source_url" "SDXL Checkpoint" "$ENABLE_DOWNLOAD_MODEL_SDXL"
+        ;;
+    models/Stable-diffusion/flux/*)
+        download_with_progress "$target_path" "$source_url" "FLUX Checkpoint" "$ENABLE_DOWNLOAD_MODEL_FLUX"
+        ;;
+    models/Stable-diffusion/*) # Fallback
+        echo "    - ❓ 处理未分类 Stable Diffusion 模型: $target_path (默认使用 SD1.5 开关)"
+        download_with_progress "$target_path" "$source_url" "SD 1.5 Checkpoint (Fallback)" "$ENABLE_DOWNLOAD_MODEL_SD15"
+        ;;
+
+    # 3. VAEs
+    models/VAE/flux-*.safetensors) # FLUX Specific VAE
+        download_with_progress "$target_path" "$source_url" "FLUX VAE" "$ENABLE_DOWNLOAD_VAE_FLUX" # Use specific FLUX VAE switch
+        ;;
+    models/VAE/*) # Other VAEs
+        download_with_progress "$target_path" "$source_url" "VAE Model" "$ENABLE_DOWNLOAD_VAE"
+        ;;
+
+    # 4. Text Encoders (Currently FLUX specific)
     models/text_encoder/*)
-      [[ "$ENABLE_DOWNLOAD_TEXT_ENCODERS" == "true" && "$NET_OK" == "true" ]] && download_with_progress "$dir" "$url"
-      ;;
-    models/*)
-      [[ "$ENABLE_DOWNLOAD_MODELS" == "true" && "$NET_OK" == "true" ]] && download_with_progress "$dir" "$url"
-      ;;
+        download_with_progress "$target_path" "$source_url" "Text Encoder (FLUX)" "$ENABLE_DOWNLOAD_TE_FLUX" # Use specific FLUX TE switch
+        ;;
+
+    # 5. ControlNet Models
+    models/ControlNet/*)
+        if [[ "$target_path" == *sdxl* || "$target_path" == *SDXL* ]]; then
+            download_with_progress "$target_path" "$source_url" "ControlNet SDXL" "$ENABLE_DOWNLOAD_CNET_SDXL"
+        elif [[ "$target_path" == *flux* || "$target_path" == *FLUX* ]]; then
+            download_with_progress "$target_path" "$source_url" "ControlNet FLUX" "$ENABLE_DOWNLOAD_CNET_FLUX"
+        # Use keywords sd15 or v11 as indicators for SD 1.5 ControlNets
+        elif [[ "$target_path" == *sd15* || "$target_path" == *SD15* || "$target_path" == *v11p* || "$target_path" == *v11e* || "$target_path" == *v11f* ]]; then
+             download_with_progress "$target_path" "$source_url" "ControlNet SD 1.5" "$ENABLE_DOWNLOAD_CNET_SD15"
+        else
+            echo "    - ❓ 处理未分类 ControlNet 模型: $target_path (默认使用 SD1.5 ControlNet 开关)"
+            download_with_progress "$target_path" "$source_url" "ControlNet SD 1.5 (Fallback)" "$ENABLE_DOWNLOAD_CNET_SD15"
+        fi
+        ;;
+
+    # 6. LoRA and related models
+    models/Lora/* | models/LyCORIS/* | models/LoCon/*)
+        download_with_progress "$target_path" "$source_url" "LoRA/LyCORIS" "$ENABLE_DOWNLOAD_LORAS"
+        ;;
+
+    # 7. Embeddings / Textual Inversion
+    models/TextualInversion/* | embeddings/*)
+       download_with_progress "$target_path" "$source_url" "Embedding/Textual Inversion" "$ENABLE_DOWNLOAD_EMBEDDINGS"
+       ;;
+
+    # 8. Upscalers
+    models/Upscaler/* | models/ESRGAN/*)
+       download_with_progress "$target_path" "$source_url" "Upscaler Model" "$ENABLE_DOWNLOAD_UPSCALERS"
+       ;;
+
+    # 9. Fallback for any other paths
     *)
-      echo "❓ 未识别资源类型: $dir"
-      ;;
-  esac
-done < "$RESOURCE_PATH"
+        if [[ "$source_url" == *.git ]]; then
+             echo "    - ❓ 处理未分类 Git 仓库: $target_path (默认使用 Extension 开关)"
+             clone_or_update_repo "$target_path" "$source_url" # Uses ENABLE_DOWNLOAD_EXTS internally
+        elif [[ "$source_url" == http* ]]; then
+             echo "    - ❓ 处理未分类文件下载: $target_path (默认使用 SD1.5 Model 开关)"
+             download_with_progress "$target_path" "$source_url" "Unknown Model/File" "$ENABLE_DOWNLOAD_MODEL_SD15"
+        else
+             echo "    - ❓ 无法识别的资源类型或无效 URL: target='$target_path', source='$source_url'"
+        fi
+        ;;
+esac # End case
+done < "$RESOURCE_PATH" # 从资源文件读取
+echo "✅ 资源下载处理完成。"
 
 # ==================================================
 # Token 处理 (Hugging Face, Civitai)
