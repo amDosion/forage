@@ -5,7 +5,7 @@ on:
 
 env:
   DOCKER_IMAGE: chuan1127/github-stable-diffusion-webui-forge-cuda12.6
-  FORGE_REPO: https://github.com/lllyasviel/stable-diffusion-webui-forge.git
+  FORGE_REPO: https://github.com/amDosion/stable-diffusion-webui-fastforge.git
   AUTO_REPO: https://github.com/AUTOMATIC1111/stable-diffusion-webui.git
 
 jobs:
