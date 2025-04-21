@@ -8,13 +8,11 @@ extensions/sd-webui-wd14-tagger,https://github.com/Akegarasu/sd-webui-wd14-tagge
 extensions/sd_forge_hypertile_svd_z123,https://github.com/licyk/sd_forge_hypertile_svd_z123.git
 extensions/stable-diffusion-webui-localization-zh_Hans,https://github.com/hanamizuki-ai/stable-diffusion-webui-localization-zh_Hans.git
 extensions/ultimate-upscale-for-automatic1111,https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git
-extensions/multi-subject-render,https://github.com/Extraltodeus/multi-subject-render.git
 extensions/sd-webui-regional-prompter,https://github.com/hako-mikan/sd-webui-regional-prompter.git
 extensions/sd-webui-incantations,https://github.com/v0xie/sd-webui-incantations.git
 extensions/sd-webui-rpg-diffusionmaster,https://github.com/YangLing0818/RPG-DiffusionMaster.git
 extensions/sd-webui-agentattention,https://github.com/v0xie/sd-webui-agentattention.git
 extensions/test_my_prompt,https://github.com/Extraltodeus/test_my_prompt.git
-extensions/sd-webui-mov2mov,https://github.com/amDosion/sd-webui-mov2mov.git
 extensions/adetailer,https://github.com/Bing-su/adetailer.git
 extensions/Civitai-Helper,https://github.com/butaixianran/Stable-Diffusion-Webui-Civitai-Helper.git
 extensions/tagcomplete,https://github.com/DominikDoom/a1111-sd-webui-tagcomplete.git
@@ -34,9 +32,9 @@ models/Stable-diffusion/flux/flux-alpha.safetensors,https://huggingface.co/lllya
 models/VAE/flux-ae.safetensors,https://huggingface.co/DarkWarren/flux-ae/resolve/main/ae.safetensors
 
 # ========== Text Encoder for FLUX ==========
-models/text_encoder/clip_l.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/blob/main/clip_l.safetensors
-models/text_encoder/t5xxl_fp16.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/blob/main/t5xxl_fp16.safetensors
-models/text_encoder/t5xxl_fp8_e4m3fn.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/blob/main/t5xxl_fp8_e4m3fn.safetensors
+models/text_encoder/clip_l.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/clip_l.safetensors
+models/text_encoder/t5xxl_fp16.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp16.safetensors
+models/text_encoder/t5xxl_fp8_e4m3fn.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors
 
 
 # ======== ControlNet v1.1 模型（SD 1.5） ========
@@ -52,7 +50,7 @@ models/ControlNet/control_v11p_sd15s2_lineart_anime.pth,https://huggingface.co/l
 models/ControlNet/control_v11e_sd15_shuffle.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11e_sd15_shuffle.pth
 models/ControlNet/control_v11e_sd15_ip2p.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11e_sd15_ip2p.pth
 models/ControlNet/control_v11p_sd15_inpaint.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_inpaint.pth
-models/ControlNet/control_v11f1p_sd15_tile.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11f1p_sd15_tile.pth
+models/ControlNet/control_v11f1p_sd15_tile.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11f1e_sd15_tile.pth
 
 # ======== ControlNet SDXL 模型 ========
 models/ControlNet/controlnet-anime_painter.safetensors,https://huggingface.co/lyb888/xinsir_controlnet_collection_all/resolve/main/xinsir_anime_painter.safetensors?download=true
