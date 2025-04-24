@@ -70,6 +70,8 @@ RUN echo "🔧 正在创建非 root 用户 webui..." && \
 # ===============================
 WORKDIR /app
 COPY run.sh /app/run.sh
+
+# 在 root 用户下设置权限和工作目录
 RUN echo "🔧 正在创建工作目录并设置权限..." && \
     chmod +x /app/run.sh && \
     mkdir -p /app/webui && \
@@ -85,13 +87,7 @@ RUN echo "✅ 已成功切换至用户：$(whoami)" && \
     echo "✅ 当前工作目录为：$(pwd)"
 
 # ===============================
-# 🚩 确保用户能够访问和执行 /app/run.sh
-# ===============================
-RUN echo "🔧 确保用户 webui 可以访问 /app/run.sh" && \
-    chmod +x /app/run.sh && \
-    chown webui:webui /app/run.sh
-
-# ===============================
 # 🚩 设置容器启动入口
 # ===============================
 ENTRYPOINT ["/app/run.sh"]
+
