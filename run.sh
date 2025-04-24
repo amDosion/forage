@@ -5,22 +5,31 @@ set -e
 # 确保管道中的命令失败时也退出
 set -o pipefail
 
-# 加载自定义环境变量 
-source .env 2>/dev/null || true 
- 
-# 设置默认值（可被.env文件覆盖）
-export PYTHON=${PYTHON:-"python3.11"}
+# ==================================================
+# [0] 加载 .env 配置并设置基础环境变量（无 TARGET_DIR 依赖）
+# ==================================================
+source .env 2>/dev/null || true
+
+# 设置基本变量（先不使用 TARGET_DIR）
+export PYTHON="${PYTHON:-python3.11}"
 export TORCH_VERSION="${TORCH_VERSION:-2.6.0+cu126}"
 export TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.21.0+cu126}"
 export TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.6.0+cu126}"
 export TORCH_INDEX_URL="https://download.pytorch.org/whl/cu126"
-export WEBUI_PORT=${WEBUI_PORT:-7860}
-
-# TCMalloc 和 Pip 索引设置
+export PIP_EXTRA_INDEX_URL="$TORCH_INDEX_URL"
 export NO_TCMALLOC=1
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu126"
-echo "  - 禁用的 TCMalloc (NO_TCMALLOC): ${NO_TCMALLOC}"
-echo "  - pip 额外索引 (PIP_EXTRA_INDEX_URL): ${PIP_EXTRA_INDEX_URL} (用于 PyTorch cu126)"
+export WEBUI_PORT="${WEBUI_PORT:-7860}"
+export UI="${UI:-forge}"
+export COMMANDLINE_ARGS="${COMMANDLINE_ARGS:---xformers --api --listen --enable-insecure-extension-access --theme dark --cuda-malloc --loglevel DEBUG --ui-debug-mode --gradio-debug}"
+
+# 控制台确认
+echo "✅ 已加载 .env 并初始化基本环境变量："
+echo "  - PYTHON:              $PYTHON"
+echo "  - TORCH_VERSION:       $TORCH_VERSION"
+echo "  - COMMANDLINE_ARGS:    $COMMANDLINE_ARGS"
+echo "  - PIP_EXTRA_INDEX_URL: $PIP_EXTRA_INDEX_URL"
+echo "  - NO_TCMALLOC:         $NO_TCMALLOC"
+echo "  - UI:                  $UI"
 
 # ==================================================
 # 日志配置
@@ -70,18 +79,6 @@ else
 fi
 echo "✅ 系统环境自检完成"
 
-# ==================================================
-# 环境变量设置
-# ==================================================
-echo "🔧 [1] 解析 UI 与 ARGS 环境变量..."
-# UI 类型，默认为 forge
-UI="${UI:-forge}"
-# 传递给 webui.sh 的参数，默认包含 --xformers
-ARGS="${ARGS:---xformers --api --listen --enable-insecure-extension-access --theme dark}"
-
-echo "  - UI 类型 (UI): ${UI}"
-echo "  - WebUI 启动参数 (ARGS): ${ARGS}"
-
 echo "🔧 [2] 解析下载开关环境变量 (默认全部启用)..."
 # 解析全局下载开关
 ENABLE_DOWNLOAD_ALL="${ENABLE_DOWNLOAD:-true}"
@@ -128,90 +125,89 @@ HF_MIRROR_URL="https://hf-mirror.com"
 GIT_MIRROR_URL="https://gitcode.net" # 使用 https
 
 # ==================================================
-# 设置 Git 源路径
+# [3] 设置 WebUI 仓库路径与 Git 源
 # ==================================================
-echo "🔧 [3] 设置 WebUI 仓库路径与 Git 源 (通常为最新开发版/Preview)..."
-TARGET_DIR="" # 初始化
-REPO=""       # 初始化
-WEBUI_EXECUTABLE="webui.sh" # 默认启动脚本名称
+echo "🔧 [3] 设置 WebUI 仓库路径与 Git 源..."
+WEBUI_EXECUTABLE="webui.sh"  # 默认启动脚本名称
 
-# 根据 UI 环境变量设置目标目录和仓库 URL
-if [ "$UI" = "auto" ]; then
-  TARGET_DIR="/app/webui/stable-diffusion-webui"
+# 根据 UI 环境变量设置 Git 仓库 URL
+if [ "$UI" = "auto" ] || [ "$UI" = "stable_diffusion_webui" ]; then
   REPO="https://github.com/AUTOMATIC1111/stable-diffusion-webui.git"
 elif [ "$UI" = "forge" ]; then
-  TARGET_DIR="/app/webui/sd-webui-forge"
-  # 使用官方 Forge 仓库
   REPO="https://github.com/lllyasviel/stable-diffusion-webui-forge.git"
-
-elif [ "$UI" = "stable_diffusion_webui" ]; then # auto 的别名
-  TARGET_DIR="/app/webui/stable-diffusion-webui"
-  REPO="https://github.com/AUTOMATIC1111/stable-diffusion-webui.git"
 else
-  echo "❌ 未知的 UI 类型: $UI。请设置 UI 环境变量为 'auto', 'forge' 或 'stable_diffusion_webui'。"
+  echo "❌ 未知的 UI 类型: $UI。请设置为 'auto', 'forge' 或 'stable_diffusion_webui'"
   exit 1
 fi
-echo "  - 目标目录: $TARGET_DIR"
-echo "  - Git 仓库源: $REPO (将克隆默认/主分支)"
+
+echo "  - Git 仓库源: $REPO"
+
+# 设置派生路径变量（基于工作目录 /app/webui）
+export VENV_DIR="venv"
+export VENV_PY="$VENV_DIR/bin/python"
+export VENV_PIP="$VENV_DIR/bin/pip"
+export PYTHON="$VENV_PY"
+export WEBUI_USER_SH="webui-user.sh"
+
+echo "✅ 派生路径设定完成："
+echo "  - VENV_DIR:     $VENV_DIR"
+echo "  - VENV_PY:      $VENV_PY"
+echo "  - VENV_PIP:     $VENV_PIP"
+echo "  - PYTHON (使用虚拟环境): $PYTHON"
+echo "  - WEBUI_USER_SH: $WEBUI_USER_SH"
 
 # ==================================================
 # 克隆/更新 WebUI 仓库
 # ==================================================
-if [ -d "$TARGET_DIR/.git" ]; then
-  echo "  - 仓库已存在于 $TARGET_DIR，尝试更新 (git pull)..."
-  # 进入目录执行 git pull, --ff-only 避免合并冲突
-  cd "$TARGET_DIR"
+# 如果目录中存在.git文件，说明已经克隆过仓库，尝试更新
+if [ -d ".git" ]; then
+  echo "  - 仓库已存在，尝试更新 (git pull)..."
   git pull --ff-only || echo "⚠️ Git pull 失败，可能是本地有修改或网络问题。将继续使用当前版本。"
-  # 操作完成后返回上层目录
-  cd /app/webui
 else
- echo "  - 仓库不存在，开始完整克隆 $REPO 到 $TARGET_DIR ..."
- # 使用完整克隆（非浅克隆），并初始化子模块（推荐）
- git clone --recursive "$REPO" "$TARGET_DIR"
+  echo "  - 仓库不存在，开始完整克隆 $REPO 到当前目录 ..."
+  # 使用完整克隆（非浅克隆），并初始化子模块（推荐）
+  git clone --recursive "$REPO" . || { echo "❌ 克隆仓库失败"; exit 1; }
 
- # 赋予启动脚本执行权限
- if [ -f "$TARGET_DIR/$WEBUI_EXECUTABLE" ]; then
-    chmod +x "$TARGET_DIR/$WEBUI_EXECUTABLE"
-    echo "  - 已赋予 $TARGET_DIR/$WEBUI_EXECUTABLE 执行权限"
- else
-    echo "⚠️ 未在克隆的仓库 $TARGET_DIR 中找到预期的启动脚本 $WEBUI_EXECUTABLE"
-    # 可以考虑是否添加 exit 1
- fi
+  # 赋予启动脚本执行权限
+  if [ -f "$WEBUI_EXECUTABLE" ]; then
+    chmod +x "$WEBUI_EXECUTABLE"
+    echo "  - 已赋予 $WEBUI_EXECUTABLE 执行权限"
+  else
+    echo "⚠️ 未在克隆的仓库中找到预期的启动脚本 $WEBUI_EXECUTABLE"
+    exit 1
+  fi
 fi
 echo "✅ 仓库操作完成"
 
-# Change working directory to TARGET_DIR before creating venv
-cd "$TARGET_DIR" || { echo "❌ Failed to change directory to $TARGET_DIR"; exit 1; }
-
 # 赋予启动脚本执行权限
-if [ -f "$TARGET_DIR/webui.sh" ]; then
-  chmod +x "$TARGET_DIR/webui.sh"
-  echo "  - 已赋予 $TARGET_DIR/webui.sh 执行权限"
+if [ -f "webui.sh" ]; then
+  chmod +x "webui.sh"
+  echo "  - 已赋予 webui.sh 执行权限"
 else
-  echo "⚠️ 未在克隆的仓库 $TARGET_DIR 中找到预期的启动脚本 webui.sh"
+  echo "⚠️ 未在克隆的仓库中找到预期的启动脚本 webui.sh"
   exit 1  # 如果找不到启动脚本，可以选择退出
 fi
 
 # 赋予启动脚本执行权限
-if [ -f "$TARGET_DIR/webui-user.sh" ]; then
-  chmod +x "$TARGET_DIR/webui-user.sh"
-  echo "  - 已赋予 $TARGET_DIR/webui-user.sh 执行权限"
+if [ -f "webui-user.sh" ]; then
+  chmod +x "webui-user.sh"
+  echo "  - 已赋予 webui-user.sh 执行权限"
 else
-  echo "⚠️ 未在克隆的仓库 $TARGET_DIR 中找到预期的启动脚本 webui-user.sh"
+  echo "⚠️ 未在克隆的仓库中找到预期的启动脚本 webui-user.sh"
   exit 1  # 如果找不到启动脚本，可以选择退出
 fi
 
 # 赋予启动脚本执行权限
-if [ -f "$TARGET_DIR/launch.py" ]; then
-  chmod +x "$TARGET_DIR/launch.py"
-  echo "  - 已赋予 $TARGET_DIR/launch.py 执行权限"
+if [ -f "launch.py" ]; then
+  chmod +x "launch.py"
+  echo "  - 已赋予 launch.py 执行权限"
 else
-  echo "⚠️ 未在克隆的仓库 $TARGET_DIR 中找到预期的启动脚本 launch.py"
+  echo "⚠️ 未在克隆的仓库中找到预期的启动脚本 launch.py"
   exit 1  # 如果找不到启动脚本，可以选择退出
 fi
 
-# 创建 repositories 目录（在 $TARGET_DIR 内）
-REPOSITORIES_DIR="$TARGET_DIR/repositories"
+# 创建 repositories 目录（在 $PWD 内）
+REPOSITORIES_DIR="$PWD/repositories"
 mkdir -p "$REPOSITORIES_DIR" || echo "⚠️ 创建 repositories 目录失败，请检查权限。"
 
 # 克隆 stable-diffusion-webui-assets 仓库（如果尚未克隆）
@@ -254,7 +250,7 @@ fi
 # requirements_versions.txt 修复
 # ---------------------------------------------------
 echo "🔧 [5] 补丁修正 requirements_versions.txt..."
-REQ_FILE="$TARGET_DIR/requirements_versions.txt"
+REQ_FILE="$PWD/requirements_versions.txt"
 touch "$REQ_FILE"
 
 # 添加或替换某个依赖版本
@@ -294,7 +290,7 @@ cat "$REQ_FILE"
 # ---------------------------------------------------
 # Python 虚拟环境设置与依赖安装
 # ---------------------------------------------------
-VENV_DIR="$TARGET_DIR/venv" # 定义虚拟环境目录
+VENV_DIR="$PWD/venv" # 定义虚拟环境目录
 
 echo "🐍 [6] 设置 Python 虚拟环境 ($VENV_DIR)..."
 
@@ -334,7 +330,7 @@ fi
 echo "📥 安装主依赖 requirements_versions.txt ..."
 DEPENDENCIES_INFO_URL="https://raw.githubusercontent.com/amDosion/forage/main/dependencies_info.json"
 DEPENDENCIES_INFO=$(curl -s "$DEPENDENCIES_INFO_URL")
-INSTALLED_DEPENDENCIES_FILE="$TARGET_DIR/installed_dependencies.json"  # 安装记录存放路径
+INSTALLED_DEPENDENCIES_FILE="$PWD/installed_dependencies.json"  # 安装记录存放路径
 
 # 修复 Windows 格式行尾
 sed -i 's/\r//' "$REQ_FILE"
@@ -890,14 +886,14 @@ echo "📁 [7] 确保 WebUI 主要工作目录存在..."
 
 # 定义要创建的完整路径列表
 DIRECTORIES=(
-  "$TARGET_DIR/embeddings"
-  "$TARGET_DIR/models/Stable-diffusion"
-  "$TARGET_DIR/models/VAE"
-  "$TARGET_DIR/models/Lora"
-  "$TARGET_DIR/models/LyCORIS"
-  "$TARGET_DIR/models/ControlNet"
-  "$TARGET_DIR/outputs"
-  "$TARGET_DIR/extensions"
+  "$PWD/embeddings"
+  "$PWD/models/Stable-diffusion"
+  "$PWD/models/VAE"
+  "$PWD/models/Lora"
+  "$PWD/models/LyCORIS"
+  "$PWD/models/ControlNet"
+  "$PWD/outputs"
+  "$PWD/extensions"
 )
 
 # 遍历检查每个目录是否存在，如果不存在则创建
@@ -931,11 +927,19 @@ else
   fi
 fi
 
+echo "🔌 [5.8] 安装 OpenAI CLIP 与 OpenCLIP"
+
+CLIP_URL="https://github.com/openai/CLIP/archive/d50d76daa670286dd6cacf3bcd80b5e4823fc8e1.zip"
+OPENCLIP_URL="https://github.com/mlfoundations/open_clip/archive/bb6e834e9c70d9c27d0dc3ecedeebeaeb1ffad6b.zip"
+
+"$PYTHON" -m pip install "$CLIP_URL" || echo "⚠️ clip 安装失败"
+"$PYTHON" -m pip install "$OPENCLIP_URL" || echo "⚠️ open_clip 安装失败"
+
 # ==================================================
 # 资源下载 (使用 resources.txt)
 # ==================================================
-echo "📦 [9] 处理资源下载 (基于 $TARGET_DIR/resources.txt 和下载开关)..."
-RESOURCE_PATH="$TARGET_DIR/resources.txt"  # 资源列表文件路径现在使用 $TARGET_DIR
+echo "📦 [9] 处理资源下载 (基于 $PWD/resources.txt 和下载开关)..."
+RESOURCE_PATH="$PWD/resources.txt"  # 资源列表文件路径现在使用 $PWD
 
 # 检查资源文件是否存在，如果不存在则尝试下载默认版本
 if [ ! -f "$RESOURCE_PATH" ]; then
@@ -1050,9 +1054,9 @@ download_with_progress() {
 # 插件黑名单
 # ---------------------------------------------------
 SKIP_LIST=(
-  "$TARGET_DIR/extensions/stable-diffusion-aws-extension"
-  "$TARGET_DIR/extensions/sd_dreambooth_extension"
-  "$TARGET_DIR/extensions/stable-diffusion-webui-aesthetic-image-scorer"
+  "$PWD/extensions/stable-diffusion-aws-extension"
+  "$PWD/extensions/sd_dreambooth_extension"
+  "$PWD/extensions/stable-diffusion-webui-aesthetic-image-scorer"
 )
 
 # 函数：检查目标路径是否应跳过
@@ -1077,8 +1081,8 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
   # 跳过注释行 (# 开头) 或空行 (路径或 URL 为空)
   [[ "$target_path" =~ ^#.*$ || -z "$target_path" || -z "$source_url" ]] && continue
 
-  # 在目标路径前加上 $TARGET_DIR
-  full_target_path="$TARGET_DIR/$target_path"
+  # 在目标路径前加上 $PWD
+  full_target_path="$PWD/$target_path"
 
   # 检查是否在黑名单中
   if should_skip "$full_target_path"; then
@@ -1089,44 +1093,44 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
   # 根据目标路径判断资源类型并调用相应下载函数及正确的独立开关
   case "$full_target_path" in
     # 1. Extensions
-    "$TARGET_DIR/extensions/"*)
+    "$PWD/extensions/"*)
         clone_or_update_repo "$target_path" "$source_url" # Uses ENABLE_DOWNLOAD_EXTS internally
         ;;
 
     # 2. Stable Diffusion Checkpoints
-    "$TARGET_DIR/models/Stable-diffusion/SD1.5/"*)
+    "$PWD/models/Stable-diffusion/SD1.5/"*)
         download_with_progress "$target_path" "$source_url" "SD 1.5 Checkpoint" "$ENABLE_DOWNLOAD_MODEL_SD15"
         ;;
 
-    "$TARGET_DIR/models/Stable-diffusion/XL/"*)
+    "$PWD/models/Stable-diffusion/XL/"*)
         download_with_progress "$target_path" "$source_url" "SDXL Checkpoint" "$ENABLE_DOWNLOAD_MODEL_SDXL"
         ;;
 
-    "$TARGET_DIR/models/Stable-diffusion/flux/"*)
+    "$PWD/models/Stable-diffusion/flux/"*)
         download_with_progress "$target_path" "$source_url" "FLUX Checkpoint" "$ENABLE_DOWNLOAD_MODEL_FLUX"
         ;;
 
-    "$TARGET_DIR/models/Stable-diffusion/*") # Fallback
+    "$PWD/models/Stable-diffusion/*") # Fallback
         echo "    - ❓ 处理未分类 Stable Diffusion 模型: $full_target_path (默认使用 SD1.5 开关)"
         download_with_progress "$target_path" "$source_url" "SD 1.5 Checkpoint (Fallback)" "$ENABLE_DOWNLOAD_MODEL_SD15"
         ;;
 
     # 3. VAEs
-    "$TARGET_DIR/models/VAE/flux-*.safetensors") # FLUX Specific VAE
+    "$PWD/models/VAE/flux-*.safetensors") # FLUX Specific VAE
         download_with_progress "$target_path" "$source_url" "FLUX VAE" "$ENABLE_DOWNLOAD_VAE_FLUX" # Use specific FLUX VAE switch
         ;;
 
-    "$TARGET_DIR/models/VAE/*") # Other VAEs
+    "$PWD/models/VAE/*") # Other VAEs
         download_with_progress "$target_path" "$source_url" "VAE Model" "$ENABLE_DOWNLOAD_VAE"
         ;;
 
     # 4. Text Encoders (Currently FLUX specific)
-    "$TARGET_DIR/models/text_encoder/"*)
+    "$PWD/models/text_encoder/"*)
     download_with_progress "$target_path" "$source_url" "Text Encoder" "$ENABLE_DOWNLOAD_TE"
     ;;
 
     # 5. ControlNet Models
-    "$TARGET_DIR/models/ControlNet/"*)
+    "$PWD/models/ControlNet/"*)
     filename=$(basename "$target_path")
     if [[ "$filename" == control_v11* ]]; then
         # 属于 SD 1.5 的 ControlNet 模型
@@ -1145,17 +1149,17 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
 
 
     # 6. LoRA and related models
-    "$TARGET_DIR/models/Lora/*" | "$TARGET_DIR/models/LyCORIS/*" | "$TARGET_DIR/models/LoCon/*")
+    "$PWD/models/Lora/*" | "$PWD/models/LyCORIS/*" | "$PWD/models/LoCon/*")
         download_with_progress "$target_path" "$source_url" "LoRA/LyCORIS" "$ENABLE_DOWNLOAD_LORAS"
         ;;
 
     # 7. Embeddings / Textual Inversion
-    "$TARGET_DIR/models/TextualInversion/*" | "$TARGET_DIR/embeddings/*")
+    "$PWD/models/TextualInversion/*" | "$PWD/embeddings/*")
        download_with_progress "$target_path" "$source_url" "Embedding/Textual Inversion" "$ENABLE_DOWNLOAD_EMBEDDINGS"
        ;;
 
     # 8. Upscalers
-    "$TARGET_DIR/models/Upscaler/*" | "$TARGET_DIR/models/ESRGAN/*")
+    "$PWD/models/Upscaler/*" | "$PWD/models/ESRGAN/*")
        download_with_progress "$target_path" "$source_url" "Upscaler Model" "$ENABLE_DOWNLOAD_UPSCALERS"
        ;;
 
@@ -1210,90 +1214,88 @@ else
 fi
 
 # ==================================================
-# 5.9 手动执行扩展 install.py（模拟 Forge 启动环境）
+# 5.8 安装 clip / open_clip（必须提前）
 # ==================================================
-echo "🔌 [5.9] 手动执行扩展 install.py（含 PYTHONPATH=$TARGET_DIR）"
+echo "🔌 [5.8] 安装 OpenAI CLIP 与 OpenCLIP"
 
-EXT_DIRS=("$TARGET_DIR/extensions" "$TARGET_DIR/extensions_builtin")
+CLIP_URL="https://github.com/openai/CLIP/archive/d50d76daa670286dd6cacf3bcd80b5e4823fc8e1.zip"
+OPENCLIP_URL="https://github.com/mlfoundations/open_clip/archive/bb6e834e9c70d9c27d0dc3ecedeebeaeb1ffad6b.zip"
+
+"$PYTHON" -m pip install "$CLIP_URL" || echo "⚠️ clip 安装失败"
+"$PYTHON" -m pip install "$OPENCLIP_URL" || echo "⚠️ open_clip 安装失败"
+
+# ==================================================
+# 5.9 安装扩展 install.py（含内置 extensions_builtin）
+# ==================================================
+echo "🔌 [5.9] 执行扩展 install.py（含 PYTHONPATH=$PWD）"
+
+EXT_DIRS=("$PWD/extensions" "$PWD/extensions_builtin")
+CONFIG_PATH="$PWD/config.json"
+
+# 从 config.json 中提取 disabled_extensions（如果存在）
+DISABLED_EXTS=()
+if [[ -f "$CONFIG_PATH" ]]; then
+  DISABLED_EXTS=($(jq -r '.disabled_extensions[]?' "$CONFIG_PATH"))
+fi
 
 for EXT_BASE in "${EXT_DIRS[@]}"; do
-  if [[ -d "$EXT_BASE" ]]; then
-    for EXT_PATH in "$EXT_BASE"/*; do
-      INSTALL_SCRIPT="$EXT_PATH/install.py"
-      if [[ -f "$INSTALL_SCRIPT" ]]; then
-        echo "📦 安装扩展依赖: $(basename "$EXT_PATH")"
-        PYTHONPATH="$TARGET_DIR:$PYTHONPATH" "$PYTHON" "$INSTALL_SCRIPT" || echo "⚠️ 安装失败: $(basename "$EXT_PATH")"
+  [[ -d "$EXT_BASE" ]] || continue
+  for EXT_PATH in "$EXT_BASE"/*; do
+    [[ -d "$EXT_PATH" ]] || continue
+
+    EXT_NAME=$(basename "$EXT_PATH")
+    INSTALL_SCRIPT="$EXT_PATH/install.py"
+
+    # 判断是否在禁用列表中
+    if [[ " ${DISABLED_EXTS[*]} " == *" $EXT_NAME "* ]]; then
+      echo "⏭️ 跳过被禁用的扩展: $EXT_NAME"
+      continue
+    fi
+
+    if [[ -f "$INSTALL_SCRIPT" ]]; then
+      echo "📦 安装扩展依赖: $EXT_NAME"
+      timeout 120s env PYTHONPATH="$PWD:$PYTHONPATH" "$PYTHON" "$INSTALL_SCRIPT" > "$EXT_PATH/install.log" 2>&1
+      EXIT_CODE=$?
+      if [[ $EXIT_CODE -eq 124 ]]; then
+        echo "⏰ 超时未响应: $EXT_NAME（可能卡在 pip）"
+      elif [[ $EXIT_CODE -ne 0 ]]; then
+        echo "⚠️ 安装失败: $EXT_NAME（详情见 install.log）"
+      else
+        echo "✅ 安装成功: $EXT_NAME"
       fi
-    done
-  fi
+    fi
+  done
 done
 
 # ---------------------------------------------------
-# 🔥 启动最终服务（使用 webui-user.sh + 自定义虚拟环境）
+# 🔥 启动最终服务（使用方案 C：你的 venv + 跳过官方 prepare/install 流程）
 # ---------------------------------------------------
+echo "🚀 [11] 所有准备就绪，使用 venv 启动 webui.py ..."
 
-echo "🚀 [11] 所有准备就绪，使用 webui-user.sh 启动 WebUI（使用自定义 venv）..."
-
-# 设置路径
-VENV_DIR="$TARGET_DIR/venv"
-VENV_PY="$VENV_DIR/bin/python"
-VENV_PIP="$VENV_DIR/bin/pip"
-WEBUI_USER_SH="$TARGET_DIR/webui-user.sh"
-
-# 设置 webui-user.sh 所需环境变量
-export VENV_DIR="$VENV_DIR"
-export PYTHON="$VENV_PY"
-export REQS_FILE="requirements.txt"  # 可选：使用更兼容的 requirements 文件
-export COMMANDLINE_ARGS="$ARGS"  # 设置实际启动参数
-
-# 推荐使用 Python 3.10.6
-PY_VER="$($VENV_PY -V 2>&1)"
-if [[ "$PY_VER" != *"3.10.6"* ]]; then
-  echo "⚠️ 警告：当前 Python 版本为 $PY_VER，推荐使用 Python 3.10.6 以避免兼容性问题"
-fi
-
-# 激活虚拟环境（用于执行 fastapi 安装）
+# 激活虚拟环境（如果未激活）
 if [[ -z "$VIRTUAL_ENV" ]]; then
-  echo "⚠️ 虚拟环境未激活，尝试激活: source $VENV_DIR/bin/activate"
-  source "$VENV_DIR/bin/activate" || { echo "❌ 无法激活虚拟环境"; exit 1; }
-  echo "✅ 虚拟环境激活成功"
+  echo "⚠️ 虚拟环境未激活，正在激活..."
+  echo "  - 激活虚拟环境: source $PWD/venv/bin/activate"
+  source "$PWD/venv/bin/activate" || { echo "❌ 无法激活虚拟环境"; exit 1; }
+  echo "✅ 虚拟环境成功激活"
 else
-  echo "✅ 虚拟环境已激活: $VIRTUAL_ENV"
+  echo "✅ 虚拟环境已激活"
 fi
 
-# 确保 fastapi 已安装
+# ✅ 检查 fastapi 是否存在，否则安装指定版本
 REQUIRED_FASTAPI_VERSION="0.104.1"
-if ! "$VENV_PY" -c "import fastapi" &>/dev/null; then
+if ! "$PWD/venv/bin/python" -c "import fastapi" &>/dev/null; then
   echo "📦 未检测到 fastapi，正在安装 fastapi==$REQUIRED_FASTAPI_VERSION ..."
-  "$VENV_PIP" install "fastapi==$REQUIRED_FASTAPI_VERSION" || {
-    echo "❌ fastapi 安装失败"; exit 1;
-  }
+  "$PWD/venv/bin/pip" install "fastapi==$REQUIRED_FASTAPI_VERSION" || { echo "❌ 安装 fastapi 失败"; exit 1; }
 else
   echo "✅ fastapi 已安装，跳过"
 fi
 
-# 启动前环境变量检查
-echo "🧪 启动前变量检查（供 webui-user.sh 使用）:"
-echo "  - VENV_DIR:         $VENV_DIR"
-echo "  - PYTHON:           $PYTHON"
-echo "  - REQS_FILE:        ${REQS_FILE:-<默认requirements_versions.txt>}"
-echo "  - COMMANDLINE_ARGS: $COMMANDLINE_ARGS"
-echo "  - WEBUI_USER_SH:    $WEBUI_USER_SH"
-echo "  - TARGET_DIR:       $TARGET_DIR"
-echo "  - 当前用户:         $(whoami)"
-echo "  - 当前目录:         $(pwd)"
-echo "  - Python 版本:      $($PYTHON -V 2>&1)"
+# 设置启动参数
+# echo "🧠 设置启动参数 COMMANDLINE_ARGS"
+# export COMMANDLINE_ARGS="--cuda-malloc --skip-install --skip-prepare-environment --skip-python-version-check --skip-torch-cuda-test $ARGS"
 
-# 设置跳过 Forge 环境流程的参数，并合并用户自定义参数
-echo "🧠 设置启动参数 COMMANDLINE_ARGS"
-export COMMANDLINE_ARGS="--cuda-malloc --skip-install --skip-prepare-environment --skip-python-version-check --skip-torch-cuda-test $ARGS"
-
-
-# 日志记录启动过程
+echo "🧠 启动参数: $COMMANDLINE_ARGS"
 echo "🚀 [11] 正在启动 webui.py ..."
-
-# 启动 Python 3.11 脚本 webui.py
-echo "  - 执行命令: exec $TARGET_DIR/venv/bin/python $TARGET_DIR/webui.py"
-exec "$TARGET_DIR/venv/bin/python" "$TARGET_DIR/webui.py" || { echo "❌ 启动失败：无法执行 webui.py"; exit 1; }
-
-echo "🚀 Web UI 启动成功"
+echo "  - 执行命令: exec $PWD/venv/bin/python $PWD/launch.py"
+exec "$PWD/venv/bin/python" "$PWD/launch.py" || { echo "❌ 启动失败：无法执行 webui.py"; exit 1; }
