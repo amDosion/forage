@@ -85,16 +85,13 @@ RUN echo "✅ 已成功切换至用户：$(whoami)" && \
     echo "✅ 当前工作目录为：$(pwd)"
 
 # ===============================
-# 🚩 检查 Python 环境完整性
+# 🚩 确保用户能够访问和执行 /app/run.sh
 # ===============================
-RUN echo "🔎 Python 环境自检开始..." && \
-    python3 --version && \
-    pip3 --version && \
-    python3 -m venv --help > /dev/null && \
-    echo "✅ Python、pip 和 venv 已正确安装并通过检查" || \
-    echo "⚠️ Python 环境完整性出现问题，请排查！"
+RUN echo "🔧 确保用户 webui 可以访问 /app/run.sh" && \
+    chmod +x /app/run.sh && \
+    chown webui:webui /app/run.sh
 
 # ===============================
-# 🚩 容器启动入口
+# 🚩 设置容器启动入口
 # ===============================
 ENTRYPOINT ["/app/run.sh"]
