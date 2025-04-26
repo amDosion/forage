@@ -1,0 +1,11 @@
+diff --git a/modules/launch_utils.py b/modules/launch_utils.py
+index 1234567..89abcde 100644
+--- a/modules/launch_utils.py
++++ b/modules/launch_utils.py
+@@ def prepare_environment():
+-    torch_command = None
++    import os
++    torch_command = os.environ.get('TORCH_COMMAND', None)
+@@ def prepare_environment():
+-    force_cuda = None
++    force_cuda = os.environ.get('FORCE_CUDA', None)
