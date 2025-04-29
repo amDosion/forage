@@ -12,10 +12,10 @@ source .env 2>/dev/null || true
 
 # 设置基本变量（先不使用 TARGET_DIR）
 export PYTHON="${PYTHON:-python3.11}"
-export TORCH_VERSION="${TORCH_VERSION:-2.6.0+cu126}"
-export TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.21.0+cu126}"
-export TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.6.0+cu126}"
-export TORCH_INDEX_URL="https://download.pytorch.org/whl/cu126"
+export TORCH_VERSION="${TORCH_VERSION:-2.7.0+cu128}"
+export TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.22.0+cu128}"
+export TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.7.0+cu128}"
+export TORCH_INDEX_URL="https://download.pytorch.org/whl/cu128"
 export PIP_EXTRA_INDEX_URL="$TORCH_INDEX_URL"
 export NO_TCMALLOC=1
 export WEBUI_PORT="${WEBUI_PORT:-7860}"
