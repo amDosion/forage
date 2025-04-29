@@ -22,11 +22,9 @@ models/Stable-diffusion/SD1.5/v1-5-pruned.safetensors,https://huggingface.co/run
 
 # ========== 主模型（SDXL） ==========
 models/Stable-diffusion/XL/sdxl-base-1.0.safetensors,https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors
-models/Stable-diffusion/XL/sdxl-refiner-1.0.safetensors,https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0/resolve/main/sd_xl_refiner_1.0.safetensors
 
 # ========== 主模型（FLUX） ==========
 models/Stable-diffusion/flux/flux-alpha.safetensors,https://huggingface.co/lllyasviel/flux1_dev/resolve/main/flux1-dev-fp8.safetensors
-
 
 # ========== VAE for FLUX ==========
 models/VAE/flux-ae.safetensors,https://huggingface.co/DarkWarren/flux-ae/resolve/main/ae.safetensors
@@ -35,7 +33,6 @@ models/VAE/flux-ae.safetensors,https://huggingface.co/DarkWarren/flux-ae/resolve
 models/text_encoder/clip_l.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/clip_l.safetensors
 models/text_encoder/t5xxl_fp16.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp16.safetensors
 models/text_encoder/t5xxl_fp8_e4m3fn.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors
-
 
 # ======== ControlNet v1.1 模型（SD 1.5） ========
 models/ControlNet/control_v11p_sd15_canny.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_canny.pth
