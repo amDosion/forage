@@ -1,10 +1,10 @@
-name:forge-cuda12.8
+name:test-forge-cuda12.8
 
 on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE: chuan1127/forge-cuda12.8
+  DOCKER_IMAGE: chuan1127/test-forge-cuda12.8
   FORGE_REPO: https://github.com/amDosion/stable-diffusion-webui-fastforge.git
   AUTO_REPO: https://github.com/AUTOMATIC1111/stable-diffusion-webui.git
 
