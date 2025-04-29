@@ -244,7 +244,6 @@ fi
 export TORCH_COMMAND="pip install torch==2.7.0+cu128 --extra-index-url https://download.pytorch.org/whl/cu128"
 export FORCE_CUDA="128"
 
-
 # 创建 repositories 目录（在 $PWD 内）
 REPOSITORIES_DIR="$PWD/repositories"
 mkdir -p "$REPOSITORIES_DIR" || echo "⚠️ 创建 repositories 目录失败，请检查权限。"
