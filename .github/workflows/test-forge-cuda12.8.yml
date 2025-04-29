@@ -1,22 +1,22 @@
-name:test-forge-cuda12.8
+name: forge-cuda128
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # 仅手动触发或用于其他触发方式
 
 env:
-  DOCKER_IMAGE: chuan1127/test-forge-cuda12.8
-  FORGE_REPO: https://github.com/amDosion/stable-diffusion-webui-fastforge.git
+  DOCKER_IMAGE: chuan1127/forge-cuda128
+  FORGE_REPO: https://github.com/lllyasviel/stable-diffusion-webui-forge
   AUTO_REPO: https://github.com/AUTOMATIC1111/stable-diffusion-webui.git
 
 jobs:
-  check-and-build:
+  sd-webui-auto-check-and-build:
     runs-on: ubuntu-latest
 
     steps:
       - name: 📥 Checkout this repo
         uses: actions/checkout@v3
 
-      - name: 🔍 Clone upstream repos & get SHAs
+      - name: 🔍 Check upstream SHAs
         id: upstream
         run: |
           git clone --depth=1 $FORGE_REPO forge-latest
@@ -25,68 +25,65 @@ jobs:
           echo "forge_sha=$(cd forge-latest && git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "auto_sha=$(cd auto-latest && git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: 🔁 Compare with cache
+      - name: 🧠 Compare with cached SHAs
         id: compare
         run: |
           forge_sha="${{ steps.upstream.outputs.forge_sha }}"
           auto_sha="${{ steps.upstream.outputs.auto_sha }}"
+
           old_forge_sha=""
           old_auto_sha=""
-
           if [ -f .sha_cache ]; then
-            read -r old_forge_sha < .sha_cache
-            read -r old_auto_sha < <(tail -n1 .sha_cache)
+            old_forge_sha=$(head -n 1 .sha_cache)
+            old_auto_sha=$(tail -n 1 .sha_cache)
           fi
 
-          echo "🔍 forge: $old_forge_sha → $forge_sha"
-          echo "🔍 auto:  $old_auto_sha  → $auto_sha"
+          echo "Old forge SHA: $old_forge_sha"
+          echo "New forge SHA: $forge_sha"
+          echo "Old auto SHA:  $old_auto_sha"
+          echo "New auto SHA:  $auto_sha"
 
-          if [[ "$forge_sha" == "$old_forge_sha" && "$auto_sha" == "$old_auto_sha" ]]; then
+          if [ "$forge_sha" = "$old_forge_sha" ] && [ "$auto_sha" = "$old_auto_sha" ]; then
+            echo "✅ No changes in upstream"
             echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo -e "$forge_sha\n$auto_sha" > .sha_cache
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-      - name: 🚫 Exit early if no upstream changes
-        if: steps.compare.outputs.changed == 'false'
-        run: echo "✅ No upstream changes. Skipping build."
+          echo "🆕 Changes detected!"
+          echo "$forge_sha" > .sha_cache
+          echo "$auto_sha" >> .sha_cache
+          echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: 🧹 Clean up disk space
+      - name: 🧹 Free up Disk Space (for TensorRT)
         if: steps.compare.outputs.changed == 'true'
         run: |
-          echo "🧹 Freeing up disk space..."
-          sudo rm -rf \
-            /usr/share/dotnet \
-            /usr/local/lib/android \
-            /opt/ghc \
-            /opt/hostedtoolcache \
-            /usr/local/share/boost \
-            ~/.cache
+          echo "🧹 Removing unused preinstalled tools to free space..."
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
           sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/* /tmp/*
+          sudo rm -rf /var/lib/apt/lists/*
           df -h
 
       - name: 🛠 Setup Docker Buildx
         if: steps.compare.outputs.changed == 'true'
         uses: docker/setup-buildx-action@v3
 
-      - name: 🔐 DockerHub Login
+      - name: 🔐 Login to DockerHub
         if: steps.compare.outputs.changed == 'true'
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 🐳 Build and Push Docker Image
+      - name: 🐳 Build & Push Docker Image (with logs)
         if: steps.compare.outputs.changed == 'true'
         run: |
           echo "📦 Building Docker image: $DOCKER_IMAGE:latest"
           docker buildx build \
             --platform linux/amd64 \
             --no-cache \
-            --tag $DOCKER_IMAGE:latest \
-            --push .
-
-      - name: 🧼 Cleanup temp folders
-        run: rm -rf forge-latest auto-latest
+            -t $DOCKER_IMAGE:latest \
+            --push . 2>&1 | tee docker.log
+            
+      - name: 🧹 Clean temp files
+        run: |
+          rm -rf forge-latest auto-latest
