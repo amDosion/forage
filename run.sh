@@ -406,6 +406,25 @@ done
 
 echo "  - 所有 WebUI 相关目录已检查/创建完成。"
 
+TARGET_VERSION="0.0.30+0b3963ad"
+
+# 获取当前已安装的 xformers 版本（如果有）
+INSTALLED_VERSION=$(python -c "import importlib.metadata as m; print(m.version('xformers'))" 2>/dev/null || echo "none")
+
+if [ "$INSTALLED_VERSION" = "$TARGET_VERSION" ]; then
+    echo "xformers $TARGET_VERSION already installed. Skipping installation."
+else
+    if [ "$INSTALLED_VERSION" != "none" ]; then
+        echo "Detected xformers version $INSTALLED_VERSION. Uninstalling..."
+        pip uninstall -y xformers
+    else
+        echo "xformers not currently installed."
+    fi
+
+    echo "Installing xformers $TARGET_VERSION..."
+    pip install https://huggingface.co/Alissonerdx/xformers-0.0.30-torch2.7.0-cuda12.8/resolve/main/xformers-0.0.30%2B0b3963ad.d20250210-cp312-cp312-linux_x86_64.whl
+fi
+
 # ==================================================
 # 网络测试 (可选)
 # ==================================================
@@ -708,10 +727,6 @@ done < "$RESOURCE_PATH" # 从资源文件读取
 echo "🚀 [11] 所有准备就绪，使用 venv 启动 webui.sh ..."
 
 # 设置跳过 Forge 环境流程的参数，并合并用户自定义参数
-echo "🧠 设置启动参数 COMMANDLINE_ARGS"
-export COMMANDLINE_ARGS="--skip-python-version-check --skip-torch-cuda-test $ARGS"
-
-# 验证启动参数
 echo "🧠 启动参数: $COMMANDLINE_ARGS"
 
 # 启动 WebUI 脚本，正确传递参数
