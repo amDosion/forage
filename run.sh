@@ -19,7 +19,7 @@ export TORCH_INDEX_URL="https://download.pytorch.org/whl/cu128"
 export PIP_EXTRA_INDEX_URL="$TORCH_INDEX_URL"
 export NO_TCMALLOC=1
 export UI="${UI:-forge}"
-export COMMANDLINE_ARGS="${COMMANDLINE_ARGS:---xformers --api --listen --enable-insecure-extension-access --theme dark --cuda-malloc --loglevel DEBUG --ui-debug-mode --gradio-debug}"
+export COMMANDLINE_ARGS="${COMMANDLINE_ARGS:---xformers --precision autocast --cuda-malloc --cuda-stream --pin-shared-memory --opt-sdp-attention --no-half-vae --api --listen --enable-insecure-extension-access --skip-python-version-check --skip-torch-cuda-test --theme dark --loglevel DEBUG --ui-debug-mode --gradio-debug}"
 
 # 控制台确认
 echo "✅ 已加载 .env 并初始化基本环境变量："
