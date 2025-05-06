@@ -608,9 +608,9 @@ echo "  - 当前 pip: $(which pip) (应指向 $VENV_DIR/bin/pip)"
 # 升级 pip
 # ---------------------------------------------------
 echo "📥 升级 pip..."
-python -m pip install --upgrade pip | tee -a "$LOG_FILE"
+python -m pip install --upgrade pip
 
-echo "🔧 [6.1.1] 安装 insightface工具..."
+echo "🔧 [6.1.1] 安装 insightface 工具..."
 # ---------------------------------------------------
 # 安装 insightface 工具
 # ---------------------------------------------------
@@ -619,7 +619,7 @@ if python -m pip show insightface | grep -q "Version"; then
   echo "✅ insightface 已安装，跳过安装"
 else
   echo "📦 安装 insightface..."
-  python -m pip install --upgrade "insightface" | tee -a "$LOG_FILE"
+  python -m pip install --upgrade "insightface"
 fi
 
 # ---------------------------------------------------
@@ -630,7 +630,7 @@ if python -m pip show huggingface-hub | grep -q "Version"; then
   echo "✅ huggingface_hub[cli] 已安装，跳过安装"
 else
   echo "📦 安装 huggingface_hub[cli]..."
-  python -m pip install --upgrade "huggingface_hub[cli]" | tee -a "$LOG_FILE"
+  python -m pip install --upgrade "huggingface_hub[cli]"
 fi
 
 TARGET_VERSION="0.0.30+0b3963ad"
