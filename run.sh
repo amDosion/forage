@@ -49,13 +49,13 @@ echo "=================================================="
 echo "⏳ 开始时间: $(date)"
 
 # ==================================================
-# 🔒 [6.2] sudo 安装检查（确保 root 可切换为 webui 用户）
+# 🔒 [6.2] sudo 安装检查（确保 root 可换为 webui 用户）
 # ==================================================
 # pip 检查 (通过 python -m pip 调用)
-if python3.11 -m pip --version &>/dev/null; then
-  echo "✅ pip for Python 3.11 版本: $(python3.11 -m pip --version)"
+if python3.12 -m pip --version &>/dev/null; then
+  echo "✅ pip for Python 3.12 版本: $(python3.12 -m pip --version)"
 else
-  echo "❌ 未找到 pip for Python 3.11！"
+  echo "❌ 未找到 pip for Python 3.12！"
   exit 1
 fi
 
