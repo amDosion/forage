@@ -39,8 +39,6 @@ RUN echo "🔧 [2.1] 安装 Python 3.11 及系统依赖..." && \
     python3.11 get-pip.py && \
     rm get-pip.py && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
-    ln -sf /usr/bin/python3.11 /usr/bin/python && \
-    ln -sf /usr/bin/pip3 /usr/bin/pip \
     apt-get clean && rm -rf /var/lib/apt/lists/* /root/.cache /tmp/* && \
     echo "✅ [2.1] Python 3.11 设置完成"
 
