@@ -543,6 +543,8 @@ add_or_replace_requirement "protobuf" "4.25.3"
 add_or_replace_requirement "pydantic" "2.6.4"
 add_or_replace_requirement "open-clip-torch" "2.24.0"
 add_or_replace_requirement "GitPython" "3.1.41"
+add_or_replace_requirement "insightface" "0.7.3"
+add_or_replace_requirement "huggingface-hub" "0.30.2"
 
 # 🧹 清理注释和空行，保持纯净格式
 echo "🧹 清理注释内容..."
@@ -578,138 +580,6 @@ done
 
 echo "  - 所有 WebUI 相关目录已检查/创建完成。"
 
-# ==================================================
-# Python 虚拟环境设置与依赖安装
-# ==================================================
-VENV_DIR="venv" # 定义虚拟环境目录名
-REQUIRED_PYTHON_VERSION="3.11"
-
-echo "🐍 [6] 设置 Python 虚拟环境 ($VENV_DIR)..."
-
-# --------------------------------------------------
-# 检查系统是否存在 Python 3.11
-# --------------------------------------------------
-if ! command -v python3.11 &>/dev/null; then
-  echo "❌ 错误：未找到 python3.11，请先在系统中安装 Python 3.11"
-  exit 1
-fi
-
-# 确保 python3 默认指向的是 Python 3.11（可选）
-PYTHON_VERSION=$(python3.11 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-if [[ "$PYTHON_VERSION" != "$REQUIRED_PYTHON_VERSION" ]]; then
-  echo "❌ 错误：python3.11 不是预期版本，当前为 $PYTHON_VERSION，要求 $REQUIRED_PYTHON_VERSION"
-  exit 1
-fi
-
-# --------------------------------------------------
-# 创建虚拟环境
-# --------------------------------------------------
-if [ ! -x "$VENV_DIR/bin/activate" ]; then
-  echo "  - 虚拟环境不存在或未正确创建，现在使用 python3.11 创建..."
-  rm -rf "$VENV_DIR"
-  python3.11 -m venv "$VENV_DIR"
-  echo "  - 虚拟环境创建成功。"
-else
-  echo "  - 虚拟环境已存在于 $VENV_DIR。"
-fi
-
-# --------------------------------------------------
-# 激活虚拟环境
-# --------------------------------------------------
-echo "  - 激活虚拟环境..."
-# shellcheck source=/dev/null
-source "$VENV_DIR/bin/activate"
-
-# --------------------------------------------------
-# 确认 Python 和 pip 版本
-# --------------------------------------------------
-echo "  - 当前 Python: $(which python) (应指向 $VENV_DIR/bin/python)"
-echo "  - 当前 pip: $(which pip) (应指向 $VENV_DIR/bin/pip)"
-
-# --------------------------------------------------
-# 升级 pip（此时已在虚拟环境中）
-# --------------------------------------------------
-echo "📥 升级 pip..."
-python -m pip install --upgrade pip
-
-echo "🔧 [6.1.1] 安装 insightface 工具..."
-# ---------------------------------------------------
-# 安装 insightface 工具
-# ---------------------------------------------------
-echo "🔍 检查 insightface 是否已安装..."
-if python -m pip show insightface | grep -q "Version"; then
-  echo "✅ insightface 已安装，跳过安装"
-else
-  echo "📦 安装 insightface..."
-  python -m pip install --upgrade "insightface"
-fi
-
-# ---------------------------------------------------
-# 安装 huggingface-cli 工具
-# ---------------------------------------------------
-echo "🔍 检查 huggingface_hub[cli] 是否已安装..."
-if python -m pip show huggingface-hub | grep -q "Version"; then
-  echo "✅ huggingface_hub[cli] 已安装，跳过安装"
-else
-  echo "📦 安装 huggingface_hub[cli]..."
-  python -m pip install --upgrade "huggingface_hub[cli]"
-fi
-
-# ==================================================
-# 网络测试 (可选)
-# ==================================================
-echo "🌐 [8] 网络连通性测试 (尝试访问 huggingface.co)..."
-NET_OK=false # 默认网络不通
-# 使用 curl 测试连接，设置超时时间
-if curl -fsS --connect-timeout 5 https://huggingface.co > /dev/null; then
-  NET_OK=true
-  echo "  - ✅ 网络连通 (huggingface.co 可访问)"
-else
-  # 如果 Hugging Face 不通，尝试 GitHub 作为备选检查
-  if curl -fsS --connect-timeout 5 https://github.com > /dev/null; then
-      NET_OK=true # 至少 Git 相关操作可能成功
-      echo "  - ⚠️ huggingface.co 无法访问，但 github.com 可访问。部分模型下载可能受影响。"
-  else
-      echo "  - ❌ 网络不通 (无法访问 huggingface.co 和 github.com)。资源下载和插件更新将失败！"
-  fi
-fi
-
-# ==================================================
-# Token 处理 (Hugging Face, Civitai)
-# ==================================================
-# 步骤号顺延为 [10]
-echo "🔐 [10] 处理 API Tokens (如果已提供)..."
-
-# 处理 Hugging Face Token (如果环境变量已设置)
-if [[ -n "$HUGGINGFACE_TOKEN" ]]; then
-  echo "  - 检测到 HUGGINGFACE_TOKEN，尝试使用 huggingface-cli 登录..."
-  # 检查 huggingface-cli 命令是否存在 (应由 huggingface_hub[cli] 提供)
-  if command -v huggingface-cli &>/dev/null; then
-      # 正确用法：将 token 作为参数传递给 --token
-      huggingface-cli login --token "$HUGGINGFACE_TOKEN" --add-to-git-credential
-      # 检查命令执行是否成功
-      if [ $? -eq 0 ]; then
-          echo "  - ✅ Hugging Face CLI 登录成功。"
-      else
-          # 登录失败通常不会是致命错误，只记录警告
-          echo "  - ⚠️ Hugging Face CLI 登录失败。请检查 Token 是否有效、是否过期或 huggingface-cli 是否工作正常。"
-      fi
-  else
-      echo "  - ⚠️ 未找到 huggingface-cli 命令，无法登录。请确保依赖 'huggingface_hub[cli]' 已正确安装在 venv 中。"
-  fi
-else
-  # 如果未提供 Token
-  echo "  - ⏭️ 未设置 HUGGINGFACE_TOKEN 环境变量，跳过 Hugging Face 登录。"
-fi
-
-# 检查 Civitai API Token
-if [[ -n "$CIVITAI_API_TOKEN" ]]; then
-  echo "  - ✅ 检测到 CIVITAI_API_TOKEN (长度: ${#CIVITAI_API_TOKEN})。"
-else
-  echo "  - ⏭️ 未设置 CIVITAI_API_TOKEN 环境变量。"
-fi
-
-deactivate
 
 echo "🚀 [11] 所有准备就绪，使用 venv 启动 webui.sh ..."
 
