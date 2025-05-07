@@ -581,32 +581,53 @@ echo "  - 所有 WebUI 相关目录已检查/创建完成。"
 # Python 虚拟环境设置与依赖安装
 # ==================================================
 VENV_DIR="venv" # 定义虚拟环境目录名
+REQUIRED_PYTHON_VERSION="3.12"
+
 echo "🐍 [6] 设置 Python 虚拟环境 ($VENV_DIR)..."
 
-# 检查虚拟环境是否已正确创建
+# --------------------------------------------------
+# 检查系统是否存在 Python 3.12
+# --------------------------------------------------
+if ! command -v python3.12 &>/dev/null; then
+  echo "❌ 错误：未找到 python3.12，请先在系统中安装 Python 3.12"
+  exit 1
+fi
+
+# 确保 python3 默认指向的是 Python 3.12（可选）
+PYTHON_VERSION=$(python3.12 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+if [[ "$PYTHON_VERSION" != "$REQUIRED_PYTHON_VERSION" ]]; then
+  echo "❌ 错误：python3.12 不是预期版本，当前为 $PYTHON_VERSION，要求 $REQUIRED_PYTHON_VERSION"
+  exit 1
+fi
+
+# --------------------------------------------------
+# 创建虚拟环境
+# --------------------------------------------------
 if [ ! -x "$VENV_DIR/bin/activate" ]; then
-  echo "  - 虚拟环境不存在或未正确创建，现在使用 python3.11 创建..."
-  # 移除可能存在的无效目录
+  echo "  - 虚拟环境不存在或未正确创建，现在使用 python3.12 创建..."
   rm -rf "$VENV_DIR"
-  # 使用明确的 Python 版本创建
   python3.12 -m venv "$VENV_DIR"
   echo "  - 虚拟环境创建成功。"
 else
   echo "  - 虚拟环境已存在于 $VENV_DIR。"
 fi
 
-echo "  - 激活虚拟环境..."
+# --------------------------------------------------
 # 激活虚拟环境
+# --------------------------------------------------
+echo "  - 激活虚拟环境..."
 # shellcheck source=/dev/null
 source "$VENV_DIR/bin/activate"
 
-# 确认 venv 内的 Python 和 pip
+# --------------------------------------------------
+# 确认 Python 和 pip 版本
+# --------------------------------------------------
 echo "  - 当前 Python: $(which python) (应指向 $VENV_DIR/bin/python)"
 echo "  - 当前 pip: $(which pip) (应指向 $VENV_DIR/bin/pip)"
 
-# ---------------------------------------------------
-# 升级 pip
-# ---------------------------------------------------
+# --------------------------------------------------
+# 升级 pip（此时已在虚拟环境中）
+# --------------------------------------------------
 echo "📥 升级 pip..."
 python -m pip install --upgrade pip
 
