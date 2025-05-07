@@ -664,6 +664,13 @@ MAIN_REPO_DIR="/app/webui/sd-webui-forge"    # 如果你的主仓库位置不同
 XFORMERS_SRC_DIR="${MAIN_REPO_DIR}/xformers-src"
 XFORMERS_REPO_URL="https://github.com/amDosion/xformers.git" # 官方仓库 - 如果使用 fork，请更改
 
+# 目标 PyTorch 版本 (CUDA 12.8 的 Nightly 版本示例)
+# 注意: 确保这些与你的设置所需的*精确*版本匹配。
+TORCH_VER="2.7.0+cu128"
+VISION_VER="0.22.0+cu128"
+AUDIO_VER="2.7.0+cu128"
+TORCH_INSTALL_CMD="pip install torch==${TORCH_VER} torchvision==${VISION_VER} torchaudio==${AUDIO_VER} --extra-index-url https://download.pytorch.org/whl/cu128 --no-cache-dir"
+
 # 构建配置
 TARGET_CUDA_ARCH="${TORCH_CUDA_ARCH_LIST:-8.9}" # 默认为 8.9 (例如，RTX 3090/4090)，如果外部未设置
 MAX_BUILD_JOBS="${MAX_JOBS:-$(nproc)}"         # 默认使用所有可用核心，如果需要，稍后限制
