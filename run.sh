@@ -11,7 +11,7 @@ set -o pipefail
 source .env 2>/dev/null || true
 
 # 设置基本变量（先不使用 TARGET_DIR）
-export PYTHON="${PYTHON:-python3.11}"
+export PYTHON="${PYTHON:-python3.12}"
 export TORCH_VERSION="${TORCH_VERSION:-2.7.0+cu128}"
 export TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.22.0+cu128}"
 export TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.7.0+cu128}"
@@ -589,7 +589,7 @@ if [ ! -x "$VENV_DIR/bin/activate" ]; then
   # 移除可能存在的无效目录
   rm -rf "$VENV_DIR"
   # 使用明确的 Python 版本创建
-  python3.11 -m venv "$VENV_DIR"
+  python3.12 -m venv "$VENV_DIR"
   echo "  - 虚拟环境创建成功。"
 else
   echo "  - 虚拟环境已存在于 $VENV_DIR。"
