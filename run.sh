@@ -716,7 +716,7 @@ echo "🚀 [11] 所有准备就绪，使用 venv 启动 webui.sh ..."
 # 设置跳过 Forge 环境流程的参数，并合并用户自定义参数
 echo "🧠 启动参数: $COMMANDLINE_ARGS"
 
-# 启动 WebUI 脚本，正确传递参数
-echo "🚀 [11] 启动命令: exec \"$PWD/webui.sh\" $COMMANDLINE_ARGS"
+# 只传一次参数，避免重复
 set -- $COMMANDLINE_ARGS
+echo "🚀 [11] 启动命令: exec \"$PWD/webui.sh\" $@"
 exec "$PWD/webui.sh" "$@"
