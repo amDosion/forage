@@ -167,46 +167,6 @@ else
   exit 1  # 如果找不到启动脚本，可以选择退出
 fi
 
-# 创建 repositories 目录（在 $PWD 内）
-REPOSITORIES_DIR="$PWD/repositories"
-mkdir -p "$REPOSITORIES_DIR" || echo "⚠️ 创建 repositories 目录失败，请检查权限。"
-
-# 克隆 stable-diffusion-webui-assets 仓库（如果尚未克隆）
-REPO_ASSETS_DIR="$REPOSITORIES_DIR/stable-diffusion-webui-assets"
-if [ ! -d "$REPO_ASSETS_DIR" ]; then
-  echo "🚀 克隆 stable-diffusion-webui-assets 仓库..."
-  git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui-assets.git "$REPO_ASSETS_DIR" || echo "❌ 克隆 stable-diffusion-webui-assets 仓库失败"
-else
-  echo "✅ stable-diffusion-webui-assets 仓库已经存在，跳过克隆。"
-fi
-
-# 克隆 huggingface_guess 仓库（如果尚未克隆）
-REPO_HUGGINGFACE_GUESS_DIR="$REPOSITORIES_DIR/huggingface_guess"
-if [ ! -d "$REPO_HUGGINGFACE_GUESS_DIR" ]; then
-  echo "🚀 克隆 huggingface_guess 仓库..."
-  git clone https://github.com/lllyasviel/huggingface_guess.git "$REPO_HUGGINGFACE_GUESS_DIR" || echo "❌ 克隆 huggingface_guess 仓库失败"
-else
-  echo "✅ huggingface_guess 仓库已经存在，跳过克隆。"
-fi
-
-# 克隆 BLIP 仓库（如果尚未克隆）
-REPO_BLIP_DIR="$REPOSITORIES_DIR/BLIP"
-if [ ! -d "$REPO_BLIP_DIR" ]; then
-  echo "🚀 克隆 BLIP 仓库..."
-  git clone https://github.com/salesforce/BLIP.git "$REPO_BLIP_DIR" || echo "❌ 克隆 BLIP 仓库失败"
-else
-  echo "✅ BLIP 仓库已经存在，跳过克隆。"
-fi
-
-# 克隆 google_blockly_prototypes 仓库（如果尚未克隆）
-REPO_GOOGLE_BLOCKLY_DIR="$REPOSITORIES_DIR/google_blockly_prototypes"
-if [ ! -d "$REPO_GOOGLE_BLOCKLY_DIR" ]; then
-  echo "🚀 克隆 google_blockly_prototypes 仓库..."
-  git clone https://github.com/lllyasviel/google_blockly_prototypes.git "$REPO_GOOGLE_BLOCKLY_DIR" || echo "❌ 克隆 google_blockly_prototypes 仓库失败"
-else
-  echo "✅ google_blockly_prototypes 仓库已经存在，跳过克隆。"
-fi
-
 # ---------------------------------------------------
 # requirements_versions.txt 修复
 # ---------------------------------------------------
@@ -235,7 +195,6 @@ add_or_replace_requirement "torchsde" "0.2.6"
 add_or_replace_requirement "protobuf" "4.25.3"
 add_or_replace_requirement "pydantic" "2.6.4"
 add_or_replace_requirement "open-clip-torch" "2.24.0"
-add_or_replace_requirement "GitPython" "3.1.41"
 
 # 🧹 清理注释和空行，保持纯净格式
 echo "🧹 清理注释内容..."
