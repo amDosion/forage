@@ -26,10 +26,6 @@ RUN echo -e "🔧 开始安装系统依赖和 CUDA 开发工具...\n" && \
         apt-transport-https htop nano bsdmainutils \
         lsb-release software-properties-common && \
     echo -e "✅ 基础系统依赖安装完成\n" && \
-    echo -e "🔧 正在安装 CUDA 12.8 工具链和数学库...\n" && \
-    apt-get install -y --no-install-recommends \
-        cuda-compiler-12-8 libcublas-12-8 libcublas-dev-12-8 && \
-    echo -e "✅ CUDA 工具链安装完成\n" && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ===============================
