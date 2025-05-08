@@ -36,17 +36,6 @@ echo "🚀 [0] 启动脚本 - Stable Diffusion WebUI (CUDA 12.8 / PyTorch)"
 echo "=================================================="
 echo "⏳ 开始时间: $(date)"
 
-# ==================================================
-# 🔒 [6.2] sudo 安装检查（确保 root 可换为 webui 用户）
-# ==================================================
-# pip 检查 (通过 python -m pip 调用)
-if python3.11 -m pip --version &>/dev/null; then
-  echo "✅ pip for Python 3.11 版本: $(python3.11 -m pip --version)"
-else
-  echo "❌ 未找到 pip for Python 3.11！"
-  exit 1
-fi
-
 # 容器检测
 if [ -f "/.dockerenv" ]; then
   echo "📦 正在 Docker 容器中运行"
@@ -217,6 +206,107 @@ if [ ! -d "$REPO_GOOGLE_BLOCKLY_DIR" ]; then
 else
   echo "✅ google_blockly_prototypes 仓库已经存在，跳过克隆。"
 fi
+
+# ---------------------------------------------------
+# requirements_versions.txt 修复
+# ---------------------------------------------------
+echo "🔧 [5] 补丁修正 requirements_versions.txt..."
+REQ_FILE="$PWD/requirements_versions.txt"
+touch "$REQ_FILE"
+
+# 添加或替换某个依赖版本
+add_or_replace_requirement() {
+  local package="$1"
+  local version="$2"
+  if grep -q "^$package==" "$REQ_FILE"; then
+    echo "🔁 替换: $package==... → $package==$version"
+    sed -i "s|^$package==.*|$package==$version|" "$REQ_FILE"
+  else
+    echo "➕ 追加: $package==$version"
+    echo "$package==$version" >> "$REQ_FILE"
+  fi
+}
+
+# 推荐依赖版本（将统一写入或替换）
+add_or_replace_requirement "xformers" "0.0.30"
+add_or_replace_requirement "diffusers" "0.31.0"
+add_or_replace_requirement "torchdiffeq" "0.2.3"
+add_or_replace_requirement "torchsde" "0.2.6"
+add_or_replace_requirement "protobuf" "4.25.3"
+add_or_replace_requirement "pydantic" "2.6.4"
+add_or_replace_requirement "open-clip-torch" "2.24.0"
+add_or_replace_requirement "GitPython" "3.1.41"
+
+# 🧹 清理注释和空行，保持纯净格式
+echo "🧹 清理注释内容..."
+CLEANED_REQ_FILE="${REQ_FILE}.cleaned"
+sed 's/#.*//' "$REQ_FILE" | sed '/^\s*$/d' > "$CLEANED_REQ_FILE"
+mv "$CLEANED_REQ_FILE" "$REQ_FILE"
+
+# ✅ 输出最终依赖列表
+echo "📄 最终依赖列表如下："
+cat "$REQ_FILE"
+
+# 定义要创建的完整路径列表
+DIRECTORIES=(
+  "$PWD/embeddings"
+  "$PWD/models/Stable-diffusion"
+  "$PWD/models/VAE"
+  "$PWD/models/Lora"
+  "$PWD/models/LyCORIS"
+  "$PWD/models/ControlNet"
+  "$PWD/outputs"
+  "$PWD/extensions"
+)
+
+# 遍历检查每个目录是否存在，如果不存在则创建
+for dir in "${DIRECTORIES[@]}"; do
+    if [ ! -d "$dir" ]; then
+        mkdir -p "$dir"
+        echo "📁 目录创建成功：$dir"
+    else
+        echo "✅ 目录已存在：$dir"
+    fi
+done
+
+echo "  - 所有 WebUI 相关目录已检查/创建完成。"
+
+# ==================================================
+# Python 虚拟环境设置与依赖安装（使用系统 python3）
+# ==================================================
+echo "🐍 [6] 虚拟环境检查..."
+
+if [ ! -x "venv/bin/activate" ]; then
+  echo "📦 创建 venv..."
+  python3 -m venv venv
+
+  echo "🔧 激活 venv..."
+  # shellcheck source=/dev/null
+  source venv/bin/activate
+
+  echo "🔧 [6.1.1] 安装工具包：insightface, huggingface_hub[cli]..."
+
+  # ---------------------------------------------------
+  # 安装工具包（insightface 和 huggingface-cli）
+  # ---------------------------------------------------
+  for pkg in insightface "huggingface_hub[cli]"; do
+    echo "🔍 检查 $pkg 是否已安装..."
+    base_pkg=$(echo "$pkg" | cut -d '[' -f 1)
+    if python -m pip show "$base_pkg" | grep -q "Version"; then
+      echo "✅ $pkg 已安装，跳过安装"
+    else
+      echo "📦 安装 $pkg..."
+      python -m pip install --upgrade "$pkg"
+    fi
+  done
+
+  echo "📦 venv 安装完成 ✅"
+  deactivate
+
+else
+  echo "✅ venv 已存在，跳过创建和安装"
+fi
+
 
 # ==================================================
 # 资源下载 (使用 resources.txt)
@@ -430,7 +520,6 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
     fi
     ;;
 
-
     # 6. LoRA and related models
     "$PWD/models/Lora/*" | "$PWD/models/LyCORIS/*" | "$PWD/models/LoCon/*")
         download_with_progress "$target_path" "$source_url" "LoRA/LyCORIS" "$ENABLE_DOWNLOAD_LORAS"
@@ -460,106 +549,6 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
         ;;
   esac # 结束 case
 done < "$RESOURCE_PATH" # 从资源文件读取
-
-# ---------------------------------------------------
-# requirements_versions.txt 修复
-# ---------------------------------------------------
-echo "🔧 [5] 补丁修正 requirements_versions.txt..."
-REQ_FILE="$PWD/requirements_versions.txt"
-touch "$REQ_FILE"
-
-# 添加或替换某个依赖版本
-add_or_replace_requirement() {
-  local package="$1"
-  local version="$2"
-  if grep -q "^$package==" "$REQ_FILE"; then
-    echo "🔁 替换: $package==... → $package==$version"
-    sed -i "s|^$package==.*|$package==$version|" "$REQ_FILE"
-  else
-    echo "➕ 追加: $package==$version"
-    echo "$package==$version" >> "$REQ_FILE"
-  fi
-}
-
-# 推荐依赖版本（将统一写入或替换）
-add_or_replace_requirement "xformers" "0.0.30"
-add_or_replace_requirement "diffusers" "0.31.0"
-add_or_replace_requirement "torchdiffeq" "0.2.3"
-add_or_replace_requirement "torchsde" "0.2.6"
-add_or_replace_requirement "protobuf" "4.25.3"
-add_or_replace_requirement "pydantic" "2.6.4"
-add_or_replace_requirement "open-clip-torch" "2.24.0"
-add_or_replace_requirement "GitPython" "3.1.41"
-
-# 🧹 清理注释和空行，保持纯净格式
-echo "🧹 清理注释内容..."
-CLEANED_REQ_FILE="${REQ_FILE}.cleaned"
-sed 's/#.*//' "$REQ_FILE" | sed '/^\s*$/d' > "$CLEANED_REQ_FILE"
-mv "$CLEANED_REQ_FILE" "$REQ_FILE"
-
-# ✅ 输出最终依赖列表
-echo "📄 最终依赖列表如下："
-cat "$REQ_FILE"
-
-# 定义要创建的完整路径列表
-DIRECTORIES=(
-  "$PWD/embeddings"
-  "$PWD/models/Stable-diffusion"
-  "$PWD/models/VAE"
-  "$PWD/models/Lora"
-  "$PWD/models/LyCORIS"
-  "$PWD/models/ControlNet"
-  "$PWD/outputs"
-  "$PWD/extensions"
-)
-
-# 遍历检查每个目录是否存在，如果不存在则创建
-for dir in "${DIRECTORIES[@]}"; do
-    if [ ! -d "$dir" ]; then
-        mkdir -p "$dir"
-        echo "📁 目录创建成功：$dir"
-    else
-        echo "✅ 目录已存在：$dir"
-    fi
-done
-
-echo "  - 所有 WebUI 相关目录已检查/创建完成。"
-
-# ==================================================
-# Python 虚拟环境设置与依赖安装（使用系统 python3）
-# ==================================================
-echo "🐍 [6] 虚拟环境检查..."
-
-if [ ! -x "venv/bin/activate" ]; then
-  echo "📦 创建 venv..."
-  python3 -m venv venv
-
-  echo "🔧 激活 venv..."
-  # shellcheck source=/dev/null
-  source venv/bin/activate
-
-  echo "🔧 [6.1.1] 安装工具包：insightface, huggingface_hub[cli]..."
-
-  # ---------------------------------------------------
-  # 安装工具包（insightface 和 huggingface-cli）
-  # ---------------------------------------------------
-  for pkg in insightface "huggingface_hub[cli]"; do
-    echo "🔍 检查 $pkg 是否已安装..."
-    base_pkg=$(echo "$pkg" | cut -d '[' -f 1)
-    if python -m pip show "$base_pkg" | grep -q "Version"; then
-      echo "✅ $pkg 已安装，跳过安装"
-    else
-      echo "📦 安装 $pkg..."
-      python -m pip install --upgrade "$pkg"
-    fi
-  done
-
-  echo "📦 venv 安装完成 ✅"
-  deactivate
-
-else
-  echo "✅ venv 已存在，跳过创建和安装"
-fi
 
 # ==================================================
 # 网络测试 (可选)
@@ -615,14 +604,9 @@ else
   echo "  - ⏭️ 未设置 CIVITAI_API_TOKEN 环境变量。"
 fi
 
+# ---------------------------------------------------
+# 🔥 启动最终服务（FIXED!）
+# ---------------------------------------------------
+echo "🚀 [11] 所有准备就绪，启动 webui.sh ..."
 
-
-echo "🚀 [11] 所有准备就绪，使用 venv 启动 webui.sh ..."
-
-# 设置跳过 Forge 环境流程的参数，并合并用户自定义参数
-echo "🧠 启动参数: $COMMANDLINE_ARGS"
-
-# 只传一次参数，避免重复
-set -- $COMMANDLINE_ARGS
-echo "🚀 [11] 启动命令: exec \"$PWD/webui.sh\" $@"
-exec "$PWD/webui.sh" "$@"
+exec bash webui.sh $ARGS
