@@ -83,7 +83,7 @@ echo "✅ DOWNLOAD_FLAGS: MODELS=$ENABLE_DOWNLOAD_MODELS, EXTS=$ENABLE_DOWNLOAD_
 
 export NO_TCMALLOC=1
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu128"
-export TORCH_COMMAND="pip install torch==2.7.0+cu128 --extra-index-url https://download.pytorch.org/whl/cu127"
+export TORCH_COMMAND="pip install torch==2.7.0+cu128 --extra-index-url https://download.pytorch.org/whl/cu128"
 
 # ---------------------------------------------------
 # 设置 Git 源路径
