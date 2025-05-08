@@ -279,7 +279,7 @@ RESOURCE_PATH="$PWD/resources.txt"  # 资源列表文件路径现在使用 $PWD
 # 检查资源文件是否存在，如果不存在则尝试下载默认版本
 if [ ! -f "$RESOURCE_PATH" ]; then
   # 指定默认资源文件的 URL
-  DEFAULT_RESOURCE_URL="https://raw.githubusercontent.com/chuan1127/SD-webui-forge/main/resources.txt"
+  DEFAULT_RESOURCE_URL="https://raw.githubusercontent.com/amDosion/forage/main/resources.txt"
   echo "  - 未找到本地 resources.txt，尝试从 ${DEFAULT_RESOURCE_URL} 下载..."
   # 使用 curl 下载，确保失败时不输出错误页面 (-f)，静默 (-s)，跟随重定向 (-L)
   curl -fsSL -o "$RESOURCE_PATH" "$DEFAULT_RESOURCE_URL"
