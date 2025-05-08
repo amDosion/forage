@@ -627,9 +627,11 @@ else
   echo "📦 安装 insightface..."
   python -m pip install --upgrade "insightface"
 fi
-
-deactivate
-
+  echo "📦 venv 安装完成 ✅"
+  deactivate
+else
+  echo "✅ venv 已存在，跳过创建和安装"
+fi
 
 echo "🚀 [11] 所有准备就绪，使用 venv 启动 webui.sh ..."
 
