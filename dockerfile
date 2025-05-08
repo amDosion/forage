@@ -8,7 +8,6 @@ FROM pytorch/pytorch:2.7.0-cuda12.8-cudnn9-devel
 # ================================================================
 ENV TZ=Asia/Shanghai
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
 
 RUN echo "🔧 [1.1] 设置系统时区为 ${TZ}..." && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
