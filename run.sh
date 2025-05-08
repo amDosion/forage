@@ -17,14 +17,6 @@ export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu128"
 export TORCH_COMMAND="pip install torch==2.7.0+cu128 --extra-index-url https://download.pytorch.org/whl/cu128"
 export UI="${UI:-forge}"
 export ARGS="${ARGS:---xformers --precision autocast --cuda-malloc --cuda-stream --opt-sdp-attention --no-half-vae --api --listen --enable-insecure-extension-access --theme dark --loglevel DEBUG --ui-debug-mode --gradio-debug}"
-# 控制台确认
-echo "✅ 已加载 .env 并初始化基本环境变量："
-echo "  - PYTHON:              $PYTHON"
-echo "  - TORCH_VERSION:       $TORCH_VERSION"
-echo "  - COMMANDLINE_ARGS:    $COMMANDLINE_ARGS"
-echo "  - PIP_EXTRA_INDEX_URL: $PIP_EXTRA_INDEX_URL"
-echo "  - NO_TCMALLOC:         $NO_TCMALLOC"
-echo "  - UI:                  $UI"
 
 # ==================================================
 # 日志配置
@@ -183,24 +175,6 @@ if [ -f "webui.sh" ]; then
   echo "  - 已赋予 webui.sh 执行权限"
 else
   echo "⚠️ 未在克隆的仓库中找到预期的启动脚本 webui.sh"
-  exit 1  # 如果找不到启动脚本，可以选择退出
-fi
-
-# 赋予启动脚本执行权限
-if [ -f "webui-user.sh" ]; then
-  chmod +x "webui-user.sh"
-  echo "  - 已赋予 webui-user.sh 执行权限"
-else
-  echo "⚠️ 未在克隆的仓库中找到预期的启动脚本 webui-user.sh"
-  exit 1  # 如果找不到启动脚本，可以选择退出
-fi
-
-# 赋予启动脚本执行权限
-if [ -f "launch.py" ]; then
-  chmod +x "launch.py"
-  echo "  - 已赋予 launch.py 执行权限"
-else
-  echo "⚠️ 未在克隆的仓库中找到预期的启动脚本 launch.py"
   exit 1  # 如果找不到启动脚本，可以选择退出
 fi
 
@@ -554,31 +528,20 @@ echo "  - 所有 WebUI 相关目录已检查/创建完成。"
 # ==================================================
 # Python 虚拟环境设置与依赖安装（使用系统 python3）
 # ==================================================
-VENV_DIR="venv"  # 定义虚拟环境目录名
+echo "🐍 [6] 虚拟环境检查..."
 
-echo "🐍 [6] 设置 Python 虚拟环境 ($VENV_DIR)..."
+if [ ! -x "venv/bin/activate" ]; then
+  echo "📦 创建 venv..."
+  python3 -m venv venv
 
-# 创建虚拟环境（如果不存在）
-# --------------------------------------------------
-if [ ! -x "$VENV_DIR/bin/activate" ]; then
-  echo "  - 虚拟环境不存在或未正确创建，现在使用 python3 创建..."
-  rm -rf "$VENV_DIR"
-  python3 -m venv "$VENV_DIR"
-  echo "  - 虚拟环境创建成功。"
-
-  # 激活虚拟环境
-  echo "  - 激活虚拟环境..."
+  echo "🔧 激活 venv..."
   # shellcheck source=/dev/null
-  source "$VENV_DIR/bin/activate"
+  source venv/bin/activate
 
-  # --------------------------------------------------
-  # 确认 Python 和 pip 版本
-  # --------------------------------------------------
-  echo "  - 当前 Python: $(which python) (应指向 $VENV_DIR/bin/python)"
-  echo "  - 当前 pip: $(which pip) (应指向 $VENV_DIR/bin/pip)"
+  echo "🔧 [6.1.1] 安装工具包：insightface, huggingface_hub[cli]..."
 
   # ---------------------------------------------------
-  # 安装所需 Python 工具包
+  # 安装工具包（insightface 和 huggingface-cli）
   # ---------------------------------------------------
   for pkg in insightface "huggingface_hub[cli]"; do
     echo "🔍 检查 $pkg 是否已安装..."
@@ -593,6 +556,7 @@ if [ ! -x "$VENV_DIR/bin/activate" ]; then
 
   echo "📦 venv 安装完成 ✅"
   deactivate
+
 else
   echo "✅ venv 已存在，跳过创建和安装"
 fi
