@@ -10,17 +10,13 @@ set -o pipefail
 # ==================================================
 source .env 2>/dev/null || true
 
-# 设置基本变量（先不使用 TARGET_DIR）
-export PYTHON="${PYTHON:-python3.11}"
-export TORCH_VERSION="${TORCH_VERSION:-2.7.0+cu128}"
-export TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.22.0+cu128}"
-export TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.7.0+cu128}"
-export TORCH_INDEX_URL="https://download.pytorch.org/whl/cu128"
-export PIP_EXTRA_INDEX_URL="$TORCH_INDEX_URL"
-export NO_TCMALLOC=1
+# 设置环境变量，强制使用固定 Torch 版本
 export UI="${UI:-forge}"
-export COMMANDLINE_ARGS="${COMMANDLINE_ARGS:---xformers --precision autocast --cuda-malloc --cuda-stream --opt-sdp-attention --no-half-vae --api --listen --enable-insecure-extension-access --theme dark --loglevel DEBUG --ui-debug-mode --gradio-debug}"
-
+export NO_TCMALLOC=1
+export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu128"
+export TORCH_COMMAND="pip install torch==2.7.0+cu128 --extra-index-url https://download.pytorch.org/whl/cu128"
+export UI="${UI:-forge}"
+export ARGS="${ARGS:---xformers --precision autocast --cuda-malloc --cuda-stream --opt-sdp-attention --no-half-vae --api --listen --enable-insecure-extension-access --theme dark --loglevel DEBUG --ui-debug-mode --gradio-debug}"
 # 控制台确认
 echo "✅ 已加载 .env 并初始化基本环境变量："
 echo "  - PYTHON:              $PYTHON"
@@ -207,28 +203,6 @@ else
   echo "⚠️ 未在克隆的仓库中找到预期的启动脚本 launch.py"
   exit 1  # 如果找不到启动脚本，可以选择退出
 fi
-
-# =========================================
-# 补丁修正 launch_utils.py 强制 torch 版本
-# =========================================
-PATCH_URL="https://raw.githubusercontent.com/amDosion/forage/main/force_torch_version.patch"
-PATCH_FILE="force_torch_version.patch"
-
-echo "🔧 下载补丁文件..."
-curl -fsSL -o "$PATCH_FILE" "$PATCH_URL" || { echo "❌ 补丁文件下载失败"; exit 1; }
-
-# 检查 patch 是否已经打过，防止重复 patch
-if patch --dry-run -p1 < "$PATCH_FILE" > /dev/null 2>&1; then
-    echo "🩹 应用补丁到 modules/launch_utils.py ..."
-    patch -p1 < "$PATCH_FILE" || { echo "❌ 应用补丁失败"; exit 1; }
-    echo "✅ 补丁应用完成！"
-else
-    echo "✅ 补丁已经应用过，跳过。"
-fi
-
-# 设置环境变量，强制使用固定 Torch 版本
-export TORCH_COMMAND="pip install torch==2.7.0+cu128 --extra-index-url https://download.pytorch.org/whl/cu128"
-export FORCE_CUDA="128"
 
 # 创建 repositories 目录（在 $PWD 内）
 REPOSITORIES_DIR="$PWD/repositories"
