@@ -584,7 +584,6 @@ VENV_DIR="venv"  # 定义虚拟环境目录名
 
 echo "🐍 [6] 设置 Python 虚拟环境 ($VENV_DIR)..."
 
-# --------------------------------------------------
 # 创建虚拟环境（如果不存在）
 # --------------------------------------------------
 if [ ! -x "$VENV_DIR/bin/activate" ]; then
@@ -605,26 +604,18 @@ if [ ! -x "$VENV_DIR/bin/activate" ]; then
   echo "  - 当前 pip: $(which pip) (应指向 $VENV_DIR/bin/pip)"
 
   # ---------------------------------------------------
-  # 安装 insightface 工具
+  # 安装所需 Python 工具包
   # ---------------------------------------------------
-  echo "🔍 检查 insightface 是否已安装..."
-  if python -m pip show insightface | grep -q "Version"; then
-    echo "✅ insightface 已安装，跳过安装"
-  else
-    echo "📦 安装 insightface..."
-    python -m pip install --upgrade "insightface"
-  fi
-
-  # ---------------------------------------------------
-  # 安装 huggingface-cli 工具
-  # ---------------------------------------------------
-  echo "🔍 检查 huggingface_hub[cli] 是否已安装..."
-  if python -m pip show huggingface-hub | grep -q "Version"; then
-    echo "✅ huggingface_hub[cli] 已安装，跳过安装"
-  else
-    echo "📦 安装 huggingface_hub[cli]..."
-    python -m pip install --upgrade "huggingface_hub[cli]"
-  fi
+  for pkg in insightface "huggingface_hub[cli]"; do
+    echo "🔍 检查 $pkg 是否已安装..."
+    base_pkg=$(echo "$pkg" | cut -d '[' -f 1)
+    if python -m pip show "$base_pkg" | grep -q "Version"; then
+      echo "✅ $pkg 已安装，跳过安装"
+    else
+      echo "📦 安装 $pkg..."
+      python -m pip install --upgrade "$pkg"
+    fi
+  done
 
   echo "📦 venv 安装完成 ✅"
   deactivate
