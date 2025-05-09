@@ -147,6 +147,9 @@ else
   chmod +x "$TARGET_DIR/webui.sh"
 fi
 
+# 进入目标目录
+cd "$TARGET_DIR" || { echo "❌ 进入目标目录失败"; exit 1; }
+
 # ---------------------------------------------------
 # 智能同步 requirements_versions.txt（基于 user_pins 差异）
 # ---------------------------------------------------
