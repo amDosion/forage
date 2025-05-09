@@ -158,11 +158,17 @@ touch "$REQ_FILE"
 add_or_replace_requirement() {
   local package="$1"
   local version="$2"
+
   if grep -q "^$package==" "$REQ_FILE"; then
-    echo "🔁 替换: $package==... → $package==$version"
-    sed -i "s|^$package==.*|$package==$version|" "$REQ_FILE"
+    local current_version
+    current_version=$(grep "^$package==" "$REQ_FILE" | cut -d '=' -f 3)
+    if [ "$current_version" != "$version" ]; then
+      echo "🔁 检测到 $package 版本为 $current_version，建议为 $version，跳过覆盖（保留用户修改）"
+    else
+      echo "✅ $package==$version 已存在，无需修改"
+    fi
   else
-    echo "➕ 追加: $package==$version"
+    echo "➕ 追加缺失依赖: $package==$version"
     echo "$package==$version" >> "$REQ_FILE"
   fi
 }
