@@ -41,7 +41,6 @@ models/ControlNet/control_v11p_sd15_inpaint.pth,https://huggingface.co/lllyasvie
 models/ControlNet/control_v11f1p_sd15_tile.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11f1e_sd15_tile.pth
 
 # ======== ControlNet SDXL 模型 ========
-models/ControlNet/controlnet-anime_painter.safetensors,https://huggingface.co/lyb888/xinsir_controlnet_collection_all/resolve/main/xinsir_anime_painter.safetensors?download=true
 models/ControlNet/controlnet-canny-sdxl-v2.safetensors,https://huggingface.co/lyb888/xinsir_controlnet_collection_all/resolve/main/xinsir_controlnet-canny-sdxl_V2.safetensors?download=true
 models/ControlNet/controlnet-depth-sdxl-1.0.safetensors,https://huggingface.co/lyb888/xinsir_controlnet_collection_all/resolve/main/xinsir_controlnet_depth_sdxl_1.0.safetensors?download=true
 models/ControlNet/controlnet-openpose-sdxl-1.0.safetensors,https://huggingface.co/lyb888/xinsir_controlnet_collection_all/resolve/main/xinsir_controlnet-openpose-sdxl-1.0.safetensors?download=true
