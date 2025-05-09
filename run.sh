@@ -221,18 +221,16 @@ if [ ! -x "venv/bin/activate" ]; then
   # ---------------------------------------------------
   # 安装工具包（insightface 和 huggingface-cli）
   # ---------------------------------------------------
-  for pkg in insightface "huggingface_hub[cli]"; do
-    echo "🔍 检查 $pkg 是否已安装..."
-    base_pkg=$(echo "$pkg" | cut -d '[' -f 1)
-    if python -m pip show "$base_pkg" | grep -q "Version"; then
-      echo "✅ $pkg 已安装，跳过安装"
-    else
-      echo "📦 安装 $pkg..."
-      python -m pip install --upgrade "$pkg"
-    fi
-  done
-  echo "📦 venv 安装完成 ✅"
-  deactivate
+echo "🔍 检查 insightface 是否已安装..."
+if python -m pip show insightface | grep -q "Version"; then
+  echo "✅ insightface 已安装，跳过安装"
+else
+  echo "📦 安装 insightface..."
+  python -m pip install --upgrade insightface
+fi
+
+echo "📦 venv 安装完成 ✅"
+deactivate
 
 else
   echo "✅ venv 已存在，跳过创建和安装"
