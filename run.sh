@@ -148,31 +148,55 @@ else
 fi
 
 # ---------------------------------------------------
-# requirements_versions.txt 修复
+# requirements_versions.txt 修复（支持用户版本优先）
 # ---------------------------------------------------
 echo "🔧 [5] 补丁修正 requirements_versions.txt..."
 REQ_FILE="$TARGET_DIR/requirements_versions.txt"
+USER_PIN_FILE="$TARGET_DIR/requirements_user_pins.txt"
+
+# 初始化主依赖列表和用户覆盖文件
 touch "$REQ_FILE"
 
+if [ ! -f "$USER_PIN_FILE" ]; then
+  echo "📄 未检测到 $USER_PIN_FILE，已创建空模板（用于用户自定义依赖版本）"
+  cat <<EOF > "$USER_PIN_FILE"
+# 在此文件中手动指定依赖版本将覆盖默认推荐
+# 示例：
+# torch==2.6.0
+# xformers==0.0.29
+EOF
+fi
+
+# 读取用户锁定版本
+get_user_pinned_version() {
+  grep -E "^$1==[^=]+$" "$USER_PIN_FILE" | cut -d '=' -f 3
+}
+
+# 主处理函数
 add_or_replace_requirement() {
   local package="$1"
-  local version="$2"
+  local recommended_version="$2"
+  local user_version
+  user_version=$(get_user_pinned_version "$package")
+
+  local final_version="${user_version:-$recommended_version}"
 
   if grep -q "^$package==" "$REQ_FILE"; then
     local current_version
     current_version=$(grep "^$package==" "$REQ_FILE" | cut -d '=' -f 3)
-    if [ "$current_version" != "$version" ]; then
-      echo "🔁 检测到 $package 版本为 $current_version，建议为 $version，跳过覆盖（保留用户修改）"
+    if [ "$current_version" != "$final_version" ]; then
+      echo "✏️ 更新 $package: $current_version → $final_version"
+      sed -i "s|^$package==.*|$package==$final_version|" "$REQ_FILE"
     else
-      echo "✅ $package==$version 已存在，无需修改"
+      echo "✅ $package==$final_version 已存在"
     fi
   else
-    echo "➕ 追加缺失依赖: $package==$version"
-    echo "$package==$version" >> "$REQ_FILE"
+    echo "➕ 写入缺失依赖: $package==$final_version"
+    echo "$package==$final_version" >> "$REQ_FILE"
   fi
 }
 
-# 推荐依赖版本
+# 推荐依赖版本列表（可自定义）
 add_or_replace_requirement "torch" "2.7.0"
 add_or_replace_requirement "xformers" "0.0.30"
 add_or_replace_requirement "torchdiffeq" "0.2.5"
@@ -185,6 +209,7 @@ add_or_replace_requirement "dill" "0.4.0"
 add_or_replace_requirement "onnxruntime-gpu" "1.17.1"
 add_or_replace_requirement "controlnet-aux" "0.0.10"
 
+# 特殊处理：GitPython 自动判断版本
 check_gitpython_version() {
   local required_version="3.1.41"
   if python3 -c "import git, sys; from packaging import version; sys.exit(0) if version.parse(git.__version__) >= version.parse('$required_version') else sys.exit(1)" 2>/dev/null; then
@@ -196,6 +221,7 @@ check_gitpython_version() {
 }
 check_gitpython_version
 
+# 输出核心依赖版本（最终写入的）
 echo "📦 最终依赖列表如下："
 grep -E '^(torch|xformers|diffusers|transformers|torchdiffeq|torchsde|GitPython|protobuf|pydantic|open-clip-torch)=' "$REQ_FILE" | sort
 
