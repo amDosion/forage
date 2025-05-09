@@ -174,45 +174,46 @@ ensure_line_ending() {
   sed -i -e '$a\' "$REQ_FILE"
 }
 
-# 🔁 增量替换或追加逻辑
+# 🔁 增量替换或追加逻辑（兼容裸包名）
 add_or_replace_requirement() {
   local package="$1"
   local version="$2"
-  if grep -q "^$package\(==.*\)\?$" "$REQ_FILE"; then
-    echo "🔁 覆盖: $package → $package==$version"
-    sed -i "s|^$package\(==.*\)\?$|$package==$version|" "$REQ_FILE"
-  else
-    ensure_line_ending
-    echo "➕ 追加: $package==$version"
-    echo "$package==$version" >> "$REQ_FILE"
-  fi
+
+  # 删除所有现存同名条目（无论是否含版本号）
+  sed -i "/^$package\(==.*\)\?$/d" "$REQ_FILE"
+
+  # 追加新条目（自动换行安全）
+  ensure_line_ending
+  echo "➕ 追加: $package==$version"
+  echo "$package==$version" >> "$REQ_FILE"
 }
 
-# 📥 应用 user_pins 增量内容
+# 📥 应用 user_pins（增强正则匹配）
 user_pin_count=0
 while IFS= read -r line || [[ -n "$line" ]]; do
   [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-  if [[ "$line" =~ ^([^=]+)==([^=]+)$ ]]; then
+  if [[ "$line" =~ ^([a-zA-Z0-9_-]+)==([a-zA-Z0-9.+_-]+)$ ]]; then
     pkg="${BASH_REMATCH[1]}"
     ver="${BASH_REMATCH[2]}"
     add_or_replace_requirement "$pkg" "$ver"
     ((user_pin_count++))
   else
-    echo "⚠️ 跳过无效行: $line"
+    echo "⚠️ 跳过非法格式行: $line"
   fi
 done < "$USER_PIN_FILE"
 
 [ "$user_pin_count" -eq 0 ] && echo "ℹ️ requirements_user_pins.txt 为空"
 
-# 🧹 清理注释和空行，保持文件干净
+# 🧹 清理注释和空行
 echo "🧹 清理注释内容..."
 CLEANED_REQ_FILE="${REQ_FILE}.cleaned"
-sed 's/#.*//' "$REQ_FILE" | sed '/^\s*$/d' > "$CLEANED_REQ_FILE"
+sed -e 's/#.*//' -e '/^\s*$/d' "$REQ_FILE" > "$CLEANED_REQ_FILE"
 mv "$CLEANED_REQ_FILE" "$REQ_FILE"
 
 # 📄 输出最终依赖
 echo "📄 当前依赖列表："
 cat "$REQ_FILE"
+
 
 # ---------------------------------------------------
 # Python 虚拟环境
