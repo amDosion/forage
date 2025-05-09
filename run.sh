@@ -199,6 +199,7 @@ add_or_replace_requirement() {
 # 推荐依赖版本列表（可自定义）
 add_or_replace_requirement "torch" "2.7.0"
 add_or_replace_requirement "xformers" "0.0.30"
+add_or_replace_requirement "insightface" "0.7.3"
 add_or_replace_requirement "torchdiffeq" "0.2.5"
 add_or_replace_requirement "torchsde" "0.2.6"
 add_or_replace_requirement "protobuf" "4.25.3"
