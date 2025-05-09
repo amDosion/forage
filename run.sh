@@ -42,7 +42,6 @@ else
   echo "⚠️ 未检测到 nvidia-smi（可能无 GPU 或驱动未安装）"
 fi
 
-
 # 容器检测
 if [ -f "/.dockerenv" ]; then
   echo "📦 正在容器中运行"
