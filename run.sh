@@ -251,6 +251,7 @@ else
   NET_OK=false
   echo "⚠️ 无法访问 Google，部分资源或插件可能无法下载"
 fi
+
 # ==================================================
 # 资源下载 (使用 resources.txt)
 # ==================================================
@@ -272,6 +273,20 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
     RESOURCE_DECLARED_PATHS["$full_path"]=1
   fi
 done < "$RESOURCE_PATH"
+
+
+# ✅✅✅ 检查本地 extensions 目录中未在 resources.txt 中声明的插件
+EXT_DIR="$PWD/extensions"
+if [ -d "$EXT_DIR" ]; then
+  echo "🧹 检查本地 extensions/ 中未声明的插件..."
+  for existing_path in "$EXT_DIR"/*; do
+    if [ -d "$existing_path" ]; then
+      if [[ -z "${RESOURCE_DECLARED_PATHS[$existing_path]}" ]]; then
+        echo "    - ⛔ 插件未在 resources.txt 声明，跳过处理: $(basename "$existing_path")"
+      fi
+    fi
+  done
+fi
 
 # ✅ 然后继续执行原来的资源遍历逻辑
 echo "  - 开始处理 resources.txt 中的条目..."
