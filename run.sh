@@ -110,9 +110,9 @@ echo "  - 下载 Text Encoders   (ENABLE_DOWNLOAD_TE): ${ENABLE_DOWNLOAD_TE}"  #
 echo "  - 是否使用 HF 镜像  (USE_HF_MIRROR): ${USE_HF_MIRROR}" # (hf-mirror.com)
 echo "  - 是否使用 Git 镜像 (USE_GIT_MIRROR): ${USE_GIT_MIRROR}" # (gitcode.net)
 
-export NO_TCMALLOC=1
-export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cu128"
-export TORCH_COMMAND="pip install torch==2.7.0+cu128 --extra-index-url https://download.pytorch.org/whl/cu128"
+export NO_TCMALLOC="${NO_TCMALLOC:-1}"
+export PIP_EXTRA_INDEX_URL="${PIP_EXTRA_INDEX_URL:-https://download.pytorch.org/whl/cu128}"
+export TORCH_COMMAND="${TORCH_COMMAND:-pip install torch==2.7.0+cu128 --extra-index-url https://download.pytorch.org/whl/cu128}"
 
 # 预定义镜像地址 (如果需要可以从环境变量读取，但简单起见先硬编码)
 HF_MIRROR_URL="https://hf-mirror.com"
