@@ -148,80 +148,80 @@ else
 fi
 
 # ---------------------------------------------------
-# requirements_versions.txt 修复（支持用户增量覆盖）
+# 智能同步 requirements_versions.txt（基于 user_pins 差异）
 # ---------------------------------------------------
-echo "🔧 [5] 修复 requirements_versions.txt（支持用户增量覆盖）..."
-REQ_FILE="$TARGET_DIR/requirements_versions.txt"
-USER_PIN_FILE="$TARGET_DIR/requirements_user_pins.txt"
+echo "🔧 [5] 智能修复 requirements_versions.txt（基于 user_pins.txt 差异）..."
 
-# 确保主依赖文件存在
+REQ_FILE="$PWD/requirements_versions.txt"
+USER_PIN_FILE="$PWD/requirements_user_pins.txt"
 touch "$REQ_FILE"
+touch "$USER_PIN_FILE"
 
-# 如果用户补丁文件不存在，则生成模板
-if [ ! -f "$USER_PIN_FILE" ]; then
-  echo "📄 未检测到 $USER_PIN_FILE，已创建空模板（用于用户自定义依赖版本）"
-  cat <<EOF > "$USER_PIN_FILE"
-# 在此文件中手动指定依赖版本将覆盖 requirements_versions.txt 中的默认值
-# 示例：
-# torch==2.6.0
-# xformers==0.0.29
-EOF
-fi
-
-# 获取用户锁定版本（例如：get_user_pinned_version torch）
-get_user_pinned_version() {
-  grep -E "^$1==[^=]+$" "$USER_PIN_FILE" | cut -d '=' -f 3
-}
-
-# 添加或替换一行依赖（用于主文件更新）
-add_or_replace_requirement() {
-  local package="$1"
-  local recommended_version="$2"
-  local user_version
-  user_version=$(get_user_pinned_version "$package")
-
-  local final_version="${user_version:-$recommended_version}"
-
-  if grep -q "^$package==" "$REQ_FILE"; then
-    local current_version
-    current_version=$(grep "^$package==" "$REQ_FILE" | cut -d '=' -f 3)
-    if [ "$current_version" != "$final_version" ]; then
-      echo "✏️ 覆盖 $package: $current_version → $final_version"
-      sed -i "s|^$package==.*|$package==$final_version|" "$REQ_FILE"
-    else
-      echo "✅ $package==$final_version 已存在"
-    fi
-  else
-    echo "➕ 新增依赖: $package==$final_version"
-    echo "$package==$final_version" >> "$REQ_FILE"
-  fi
-}
-
-# 遍历 requirements_versions.txt 并尝试用用户版本覆盖
+# 加载 user_pins.txt 到 map
+declare -A USER_MAP
 while IFS= read -r line; do
   [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
   if [[ "$line" =~ ^([^=]+)==([^=]+)$ ]]; then
-    package="${BASH_REMATCH[1]}"
-    recommended_version="${BASH_REMATCH[2]}"
-    add_or_replace_requirement "$package" "$recommended_version"
-  fi
-done < "$REQ_FILE"
-
-# 处理 user_pins 中新增的依赖（主文件中尚不存在）
-while IFS= read -r line; do
-  [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-  if [[ "$line" =~ ^([^=]+)==([^=]+)$ ]]; then
-    package="${BASH_REMATCH[1]}"
-    if ! grep -q "^$package==" "$REQ_FILE"; then
-      echo "➕ 来自用户的新增依赖: $line"
-      echo "$line" >> "$REQ_FILE"
-    fi
+    pkg="${BASH_REMATCH[1]}"
+    ver="${BASH_REMATCH[2]}"
+    USER_MAP["$pkg"]="$ver"
   fi
 done < "$USER_PIN_FILE"
 
-# 输出最终依赖版本
-echo "📦 最终依赖版本 (requirements_versions.txt)："
-cat "$REQ_FILE" | grep -v '^#' | sort
+# 标记是否发生了变更
+changed=0
+
+# 临时新文件
+TMP_REQ_FILE="${REQ_FILE}.tmp"
+> "$TMP_REQ_FILE"
+
+# 遍历已有文件，按需替换或保留
+declare -A EXISTING_MAP
+while IFS= read -r line; do
+  [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+  if [[ "$line" =~ ^([^=]+)==([^=]+)$ ]]; then
+    pkg="${BASH_REMATCH[1]}"
+    old_ver="${BASH_REMATCH[2]}"
+    EXISTING_MAP["$pkg"]=1
+
+    if [[ -n "${USER_MAP[$pkg]}" ]]; then
+      new_ver="${USER_MAP[$pkg]}"
+      if [[ "$new_ver" != "$old_ver" ]]; then
+        echo "✏️ 覆盖 $pkg: $old_ver → $new_ver"
+        echo "$pkg==$new_ver" >> "$TMP_REQ_FILE"
+        changed=1
+      else
+        echo "✅ 保留 $pkg==$old_ver"
+        echo "$pkg==$old_ver" >> "$TMP_REQ_FILE"
+      fi
+    else
+      echo "✅ 未指定 $pkg，保留 $old_ver"
+      echo "$pkg==$old_ver" >> "$TMP_REQ_FILE"
+    fi
+  fi
+done < "$REQ_FILE"
+
+# 将 user_pins.txt 中新出现的包写入
+for pkg in "${!USER_MAP[@]}"; do
+  if [[ -z "${EXISTING_MAP[$pkg]+_}" ]]; then
+    echo "➕ 新增 $pkg==${USER_MAP[$pkg]}"
+    echo "$pkg==${USER_MAP[$pkg]}" >> "$TMP_REQ_FILE"
+    changed=1
+  fi
+done
+
+# 如果有变更则替换文件
+if [[ "$changed" -eq 1 ]]; then
+  echo "💾 更新 requirements_versions.txt..."
+  mv "$TMP_REQ_FILE" "$REQ_FILE"
+else
+  echo "✅ 所有版本一致，无需更新"
+  rm "$TMP_REQ_FILE"
+fi
+
+# 输出最终依赖
+echo "📄 当前依赖列表："
+cat "$REQ_FILE"
 
 # ---------------------------------------------------
 # Python 虚拟环境
