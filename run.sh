@@ -251,29 +251,30 @@ else
   NET_OK=false
   echo "⚠️ 无法访问 Google，部分资源或插件可能无法下载"
 fi
-
-# ---------------------------------------------------
-# 插件黑名单
-# ---------------------------------------------------
-SKIP_LIST=(
-  "extensions/stable-diffusion-aws-extension"
-  "extensions/sd_dreambooth_extension"
-  "extensions/stable-diffusion-webui-aesthetic-image-scorer"
-)
-
-should_skip() {
-  local dir="$1"
-  for skip in "${SKIP_LIST[@]}"; do
-    [[ "$dir" == "$skip" ]] && return 0
-  done
-  return 1
-}
-
 # ==================================================
 # 资源下载 (使用 resources.txt)
 # ==================================================
 echo "📦 [9] 处理资源下载 (基于 $PWD/resources.txt 和下载开关)..."
-RESOURCE_PATH="$PWD/resources.txt"  # 资源列表文件路径现在使用 $PWD
+RESOURCE_PATH="$PWD/resources.txt"
+
+# ✅ ✅ ✅ 添加此段：记录 resources.txt 中声明的插件路径
+declare -A RESOURCE_DECLARED_PATHS
+
+while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
+  target_path=$(echo "$target_path" | xargs)
+  source_url=$(echo "$source_url" | xargs)
+
+  [[ "$target_path" =~ ^#.*$ || -z "$target_path" || -z "$source_url" ]] && continue
+
+  # 如果是 extensions 路径则加入映射
+  if [[ "$target_path" == extensions/* ]]; then
+    full_path="$PWD/$target_path"
+    RESOURCE_DECLARED_PATHS["$full_path"]=1
+  fi
+done < "$RESOURCE_PATH"
+
+# ✅ 然后继续执行原来的资源遍历逻辑
+echo "  - 开始处理 resources.txt 中的条目..."
 
 # 检查资源文件是否存在，如果不存在则尝试下载默认版本
 if [ ! -f "$RESOURCE_PATH" ]; then
@@ -294,14 +295,23 @@ else
   echo "  - ✅ 使用本地已存在的 resources.txt: ${RESOURCE_PATH}"
 fi
 
-# 定义函数：克隆或更新 Git 仓库 (支持独立 Git 镜像开关)
+# 定义函数：克隆或更新 Git 仓库 (支持独立 Git 镜像开关 + 资源控制)
 clone_or_update_repo() {
     # $1: 目标目录, $2: 原始仓库 URL
     local dir="$1" repo_original="$2"
     local dirname
     local repo_url # URL to be used for cloning/pulling
+    local full_path="$PWD/$dir"
 
     dirname=$(basename "$dir")
+
+    # ✅ 新增：只允许处理 resources.txt 中声明的插件路径
+    if [[ -n "$RESOURCE_PATH" && -n "${RESOURCE_DECLARED_PATHS[$full_path]}" ]]; then
+        : # 路径被声明，继续
+    else
+        echo "    - ⚠️ 插件未在 resources.txt 中声明，跳过 Git 操作: $dirname"
+        return
+    fi
 
     # 检查是否启用了 Git 镜像以及是否是 GitHub URL
     if [[ "$USE_GIT_MIRROR" == "true" && "$repo_original" == "https://github.com/"* ]]; then
@@ -332,7 +342,7 @@ clone_or_update_repo() {
         git clone --recursive "$repo_url" "$dir" || echo "      ❌ Git clone 失败: $dirname (检查 URL: $repo_url 和网络)"
     else
         echo "    - ✅ 目录已存在但非 Git 仓库，跳过 Git 操作: $dirname"
-    fi  # ✅ 这里是必须的
+    fi
 }
 
 # 定义函数：下载文件 (支持独立 HF 镜像开关)
