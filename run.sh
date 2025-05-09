@@ -158,29 +158,29 @@ echo "🔧 [5] 智能修正 requirements_versions.txt（支持 user_pins 增量�
 REQ_FILE="$PWD/requirements_versions.txt"
 USER_PIN_FILE="$PWD/requirements_user_pins.txt"
 
-# 🧱 保证基础文件存在
+# 🧱 保证文件存在
 touch "$REQ_FILE"
 [ ! -f "$USER_PIN_FILE" ] && touch "$USER_PIN_FILE"
 
-# 🧼 CRLF 处理（兼容 Windows 上传的文件）
+# 🧼 清理 CRLF（兼容 Windows）
 dos2unix_clean_file() {
   local f="$1"
   sed -i 's/\r$//' "$f"
 }
 dos2unix_clean_file "$USER_PIN_FILE"
 
-# 🧷 确保换行（防止 echo 拼接）
+# 📎 确保 echo 追加时有换行，避免拼接
 ensure_line_ending() {
   sed -i -e '$a\' "$REQ_FILE"
 }
 
-# 🧠 增量追加/替换逻辑（原始核心逻辑）
+# 🔁 增量替换或追加逻辑
 add_or_replace_requirement() {
   local package="$1"
   local version="$2"
-  if grep -q "^$package==" "$REQ_FILE"; then
-    echo "🔁 覆盖: $package==... → $package==$version"
-    sed -i "s|^$package==.*|$package==$version|" "$REQ_FILE"
+  if grep -q "^$package\(==.*\)\?$" "$REQ_FILE"; then
+    echo "🔁 覆盖: $package → $package==$version"
+    sed -i "s|^$package\(==.*\)\?$|$package==$version|" "$REQ_FILE"
   else
     ensure_line_ending
     echo "➕ 追加: $package==$version"
@@ -188,7 +188,7 @@ add_or_replace_requirement() {
   fi
 }
 
-# ♻️ 处理 user_pins 中的每一项
+# 📥 应用 user_pins 增量内容
 user_pin_count=0
 while IFS= read -r line || [[ -n "$line" ]]; do
   [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
@@ -204,13 +204,15 @@ done < "$USER_PIN_FILE"
 
 [ "$user_pin_count" -eq 0 ] && echo "ℹ️ requirements_user_pins.txt 为空"
 
-# 🧹 清理注释和空行
+# 🧹 清理注释和空行，保持文件干净
 echo "🧹 清理注释内容..."
-sed -i 's/#.*//;/^$/d' "$REQ_FILE"
+CLEANED_REQ_FILE="${REQ_FILE}.cleaned"
+sed 's/#.*//' "$REQ_FILE" | sed '/^\s*$/d' > "$CLEANED_REQ_FILE"
+mv "$CLEANED_REQ_FILE" "$REQ_FILE"
 
-# ✅ 输出最终依赖列表
-echo "📄 最终依赖列表如下："
-column -t -s= "$REQ_FILE"
+# 📄 输出最终依赖
+echo "📄 当前依赖列表："
+cat "$REQ_FILE"
 
 # ---------------------------------------------------
 # Python 虚拟环境
