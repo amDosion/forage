@@ -258,6 +258,29 @@ fi
 echo "📦 [9] 处理资源下载 (基于 $PWD/resources.txt 和下载开关)..."
 RESOURCE_PATH="$PWD/resources.txt"
 
+
+# ✅ 然后继续执行原来的资源遍历逻辑
+echo "  - 开始处理 resources.txt 中的条目..."
+
+# 检查资源文件是否存在，如果不存在则尝试下载默认版本
+if [ ! -f "$RESOURCE_PATH" ]; then
+  # 指定默认资源文件的 URL
+  DEFAULT_RESOURCE_URL="https://raw.githubusercontent.com/amDosion/forage/main/resources.txt"
+  echo "  - 未找到本地 resources.txt，尝试从 ${DEFAULT_RESOURCE_URL} 下载..."
+  # 使用 curl 下载，确保失败时不输出错误页面 (-f)，静默 (-s)，跟随重定向 (-L)
+  curl -fsSL -o "$RESOURCE_PATH" "$DEFAULT_RESOURCE_URL"
+  if [ $? -eq 0 ]; then
+      echo "  - ✅ 默认 resources.txt 下载成功。"
+  else
+      echo "  - ❌ 下载默认 resources.txt 失败。请手动将资源文件放在 ${RESOURCE_PATH} 或检查网络/URL。"
+      # 创建一个空文件以避免后续读取错误，但不会下载任何内容
+      touch "$RESOURCE_PATH"
+      echo "  - 已创建空的 resources.txt 文件以继续，但不会下载任何资源。"
+  fi
+else
+  echo "  - ✅ 使用本地已存在的 resources.txt: ${RESOURCE_PATH}"
+fi
+
 # ✅ ✅ ✅ 添加此段：记录 resources.txt 中声明的插件路径
 declare -A RESOURCE_DECLARED_PATHS
 
@@ -286,28 +309,6 @@ if [ -d "$EXT_DIR" ]; then
       fi
     fi
   done
-fi
-
-# ✅ 然后继续执行原来的资源遍历逻辑
-echo "  - 开始处理 resources.txt 中的条目..."
-
-# 检查资源文件是否存在，如果不存在则尝试下载默认版本
-if [ ! -f "$RESOURCE_PATH" ]; then
-  # 指定默认资源文件的 URL
-  DEFAULT_RESOURCE_URL="https://raw.githubusercontent.com/amDosion/forage/main/resources.txt"
-  echo "  - 未找到本地 resources.txt，尝试从 ${DEFAULT_RESOURCE_URL} 下载..."
-  # 使用 curl 下载，确保失败时不输出错误页面 (-f)，静默 (-s)，跟随重定向 (-L)
-  curl -fsSL -o "$RESOURCE_PATH" "$DEFAULT_RESOURCE_URL"
-  if [ $? -eq 0 ]; then
-      echo "  - ✅ 默认 resources.txt 下载成功。"
-  else
-      echo "  - ❌ 下载默认 resources.txt 失败。请手动将资源文件放在 ${RESOURCE_PATH} 或检查网络/URL。"
-      # 创建一个空文件以避免后续读取错误，但不会下载任何内容
-      touch "$RESOURCE_PATH"
-      echo "  - 已创建空的 resources.txt 文件以继续，但不会下载任何资源。"
-  fi
-else
-  echo "  - ✅ 使用本地已存在的 resources.txt: ${RESOURCE_PATH}"
 fi
 
 # 定义函数：克隆或更新 Git 仓库 (支持独立 Git 镜像开关 + 资源控制)
