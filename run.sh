@@ -151,79 +151,61 @@ fi
 cd "$TARGET_DIR" || { echo "❌ 进入目标目录失败"; exit 1; }
 
 # ---------------------------------------------------
-# 智能同步 requirements_versions.txt（基于 user_pins 差异）
+# requirements_versions.txt 修复（支持 user_pins 增量覆盖）
 # ---------------------------------------------------
-echo "🔧 [5] 智能修复 requirements_versions.txt（基于 user_pins.txt 差异）..."
+echo "🔧 [5] 智能修正 requirements_versions.txt（支持 user_pins 增量覆盖）..."
 
 REQ_FILE="$PWD/requirements_versions.txt"
 USER_PIN_FILE="$PWD/requirements_user_pins.txt"
-touch "$REQ_FILE"
-touch "$USER_PIN_FILE"
 
-# 加载 user_pins.txt 到 map
-declare -A USER_MAP
+touch "$REQ_FILE"
+
+# 初次运行时如果 user_pins 不存在，就初始化它为空
+if [ ! -f "$USER_PIN_FILE" ]; then
+  echo "📄 未找到 requirements_user_pins.txt，创建空文件..."
+  touch "$USER_PIN_FILE"
+fi
+
+# 函数：增量添加或替换某个依赖
+add_or_replace_requirement() {
+  local package="$1"
+  local version="$2"
+  if grep -q "^$package==" "$REQ_FILE"; then
+    echo "🔁 覆盖: $package==... → $package==$version"
+    sed -i "s|^$package==.*|$package==$version|" "$REQ_FILE"
+  else
+    echo "➕ 追加: $package==$version"
+    echo "$package==$version" >> "$REQ_FILE"
+  fi
+}
+
+# 统计 user_pins 是否为空
+user_pin_count=0
+
 while IFS= read -r line; do
   [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
   if [[ "$line" =~ ^([^=]+)==([^=]+)$ ]]; then
     pkg="${BASH_REMATCH[1]}"
     ver="${BASH_REMATCH[2]}"
-    USER_MAP["$pkg"]="$ver"
+    add_or_replace_requirement "$pkg" "$ver"
+    ((user_pin_count++))
+  else
+    echo "⚠️ 跳过无效行: $line"
   fi
 done < "$USER_PIN_FILE"
 
-# 标记是否发生了变更
-changed=0
-
-# 临时新文件
-TMP_REQ_FILE="${REQ_FILE}.tmp"
-> "$TMP_REQ_FILE"
-
-# 遍历已有文件，按需替换或保留
-declare -A EXISTING_MAP
-while IFS= read -r line; do
-  [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-  if [[ "$line" =~ ^([^=]+)==([^=]+)$ ]]; then
-    pkg="${BASH_REMATCH[1]}"
-    old_ver="${BASH_REMATCH[2]}"
-    EXISTING_MAP["$pkg"]=1
-
-    if [[ -n "${USER_MAP[$pkg]}" ]]; then
-      new_ver="${USER_MAP[$pkg]}"
-      if [[ "$new_ver" != "$old_ver" ]]; then
-        echo "✏️ 覆盖 $pkg: $old_ver → $new_ver"
-        echo "$pkg==$new_ver" >> "$TMP_REQ_FILE"
-        changed=1
-      else
-        echo "✅ 保留 $pkg==$old_ver"
-        echo "$pkg==$old_ver" >> "$TMP_REQ_FILE"
-      fi
-    else
-      echo "✅ 未指定 $pkg，保留 $old_ver"
-      echo "$pkg==$old_ver" >> "$TMP_REQ_FILE"
-    fi
-  fi
-done < "$REQ_FILE"
-
-# 将 user_pins.txt 中新出现的包写入
-for pkg in "${!USER_MAP[@]}"; do
-  if [[ -z "${EXISTING_MAP[$pkg]+_}" ]]; then
-    echo "➕ 新增 $pkg==${USER_MAP[$pkg]}"
-    echo "$pkg==${USER_MAP[$pkg]}" >> "$TMP_REQ_FILE"
-    changed=1
-  fi
-done
-
-# 如果有变更则替换文件
-if [[ "$changed" -eq 1 ]]; then
-  echo "💾 更新 requirements_versions.txt..."
-  mv "$TMP_REQ_FILE" "$REQ_FILE"
-else
-  echo "✅ 所有版本一致，无需更新"
-  rm "$TMP_REQ_FILE"
+if [[ "$user_pin_count" -eq 0 ]]; then
+  echo "ℹ️ requirements_user_pins.txt 为空，未应用任何覆盖"
 fi
 
-# 输出最终依赖
-echo "📄 当前依赖列表："
+# 🧹 清理注释和空行
+echo "🧹 清理注释内容..."
+CLEANED_REQ_FILE="${REQ_FILE}.cleaned"
+sed 's/#.*//' "$REQ_FILE" | sed '/^\s*$/d' > "$CLEANED_REQ_FILE"
+mv "$CLEANED_REQ_FILE" "$REQ_FILE"
+
+# ✅ 输出最终依赖列表
+echo "📄 最终依赖列表如下："
 cat "$REQ_FILE"
 
 # ---------------------------------------------------
