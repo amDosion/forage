@@ -3,9 +3,16 @@
 set -e
 set -o pipefail
 
-# 日志输出
+# 日志配置
+# ==================================================
 LOG_FILE="/app/webui/launch.log"
+# 若日志文件存在则清空内容
+if [[ -f "$LOG_FILE" ]]; then
+  echo "" > "$LOG_FILE"
+fi
+# 确保日志目录存在
 mkdir -p "$(dirname "$LOG_FILE")"
+# 将所有标准输出和错误输出重定向到文件和控制台
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "=================================================="
@@ -296,7 +303,6 @@ fi
 # ==================================================
 echo "📦 [9] 处理资源下载 (基于 $PWD/resources.txt 和下载开关)..."
 RESOURCE_PATH="$PWD/resources.txt"
-
 
 # ✅ 然后继续执行原来的资源遍历逻辑
 echo "  - 开始处理 resources.txt 中的条目..."
