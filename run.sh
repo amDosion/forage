@@ -234,6 +234,45 @@ else
   echo "✅ venv 已存在，跳过创建和安装"
 fi
 
+echo "🔧 激活 venv..."
+# shellcheck source=/dev/null
+source venv/bin/activate
+# ==================================================
+# Token 处理 (Hugging Face, Civitai)
+# ==================================================
+# 步骤号顺延为 [10]
+echo "🔐 [10] 处理 API Tokens (如果已提供)..."
+
+# 处理 Hugging Face Token (如果环境变量已设置)
+if [[ -n "$HUGGINGFACE_TOKEN" ]]; then
+  echo "  - 检测到 HUGGINGFACE_TOKEN，尝试使用 huggingface-cli 登录..."
+  # 检查 huggingface-cli 命令是否存在 (应由 huggingface_hub[cli] 提供)
+  if command -v huggingface-cli &>/dev/null; then
+      # 正确用法：将 token 作为参数传递给 --token
+      huggingface-cli login --token "$HUGGINGFACE_TOKEN" --add-to-git-credential
+      # 检查命令执行是否成功
+      if [ $? -eq 0 ]; then
+          echo "  - ✅ Hugging Face CLI 登录成功。"
+      else
+          # 登录失败通常不会是致命错误，只记录警告
+          echo "  - ⚠️ Hugging Face CLI 登录失败。请检查 Token 是否有效、是否过期或 huggingface-cli 是否工作正常。"
+      fi
+  else
+      echo "  - ⚠️ 未找到 huggingface-cli 命令，无法登录。请确保依赖 'huggingface_hub[cli]' 已正确安装在 venv 中。"
+  fi
+else
+  # 如果未提供 Token
+  echo "  - ⏭️ 未设置 HUGGINGFACE_TOKEN 环境变量，跳过 Hugging Face 登录。"
+fi
+
+# 检查 Civitai API Token
+if [[ -n "$CIVITAI_API_TOKEN" ]]; then
+  echo "  - ✅ 检测到 CIVITAI_API_TOKEN (长度: ${#CIVITAI_API_TOKEN})。"
+else
+  echo "  - ⏭️ 未设置 CIVITAI_API_TOKEN 环境变量。"
+fi
+deactivate
+
 # ---------------------------------------------------
 # 创建目录
 # ---------------------------------------------------
@@ -507,7 +546,6 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
     fi
     ;;
 
-
     # 6. LoRA and related models
     "$PWD/models/Lora/*" | "$PWD/models/LyCORIS/*" | "$PWD/models/LoCon/*")
         download_with_progress "$target_path" "$source_url" "LoRA/LyCORIS" "$ENABLE_DOWNLOAD_LORAS"
@@ -537,41 +575,6 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
         ;;
   esac # 结束 case
 done < "$RESOURCE_PATH" # 从资源文件读取
-
-# ==================================================
-# Token 处理 (Hugging Face, Civitai)
-# ==================================================
-# 步骤号顺延为 [10]
-echo "🔐 [10] 处理 API Tokens (如果已提供)..."
-
-# 处理 Hugging Face Token (如果环境变量已设置)
-if [[ -n "$HUGGINGFACE_TOKEN" ]]; then
-  echo "  - 检测到 HUGGINGFACE_TOKEN，尝试使用 huggingface-cli 登录..."
-  # 检查 huggingface-cli 命令是否存在 (应由 huggingface_hub[cli] 提供)
-  if command -v huggingface-cli &>/dev/null; then
-      # 正确用法：将 token 作为参数传递给 --token
-      huggingface-cli login --token "$HUGGINGFACE_TOKEN" --add-to-git-credential
-      # 检查命令执行是否成功
-      if [ $? -eq 0 ]; then
-          echo "  - ✅ Hugging Face CLI 登录成功。"
-      else
-          # 登录失败通常不会是致命错误，只记录警告
-          echo "  - ⚠️ Hugging Face CLI 登录失败。请检查 Token 是否有效、是否过期或 huggingface-cli 是否工作正常。"
-      fi
-  else
-      echo "  - ⚠️ 未找到 huggingface-cli 命令，无法登录。请确保依赖 'huggingface_hub[cli]' 已正确安装在 venv 中。"
-  fi
-else
-  # 如果未提供 Token
-  echo "  - ⏭️ 未设置 HUGGINGFACE_TOKEN 环境变量，跳过 Hugging Face 登录。"
-fi
-
-# 检查 Civitai API Token
-if [[ -n "$CIVITAI_API_TOKEN" ]]; then
-  echo "  - ✅ 检测到 CIVITAI_API_TOKEN (长度: ${#CIVITAI_API_TOKEN})。"
-else
-  echo "  - ⏭️ 未设置 CIVITAI_API_TOKEN 环境变量。"
-fi
 
 # ---------------------------------------------------
 # 🔥 启动最终服务（FIXED!）
