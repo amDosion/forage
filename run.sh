@@ -32,14 +32,6 @@ else
   exit 1
 fi
 
-# pip 检查
-if command -v pip3 &>/dev/null; then
-  echo "✅ pip3 版本: $(pip3 --version)"
-else
-  echo "❌ pip3 未安装！请在 Dockerfile 中添加 python3-pip"
-  exit 1
-fi
-
 # CUDA & GPU 检查（使用 nvidia-smi 原始图表）
 if command -v nvidia-smi &>/dev/null; then
   echo "✅ nvidia-smi 检测成功，GPU 原始信息如下："
@@ -178,11 +170,11 @@ add_or_replace_requirement() {
 # 推荐依赖版本
 add_or_replace_requirement "torch" "2.7.0"
 add_or_replace_requirement "xformers" "0.0.30"
-add_or_replace_requirement "torchdiffeq" "0.2.3"
+add_or_replace_requirement "torchdiffeq" "0.2.5"
 add_or_replace_requirement "torchsde" "0.2.6"
 add_or_replace_requirement "protobuf" "4.25.3"
 add_or_replace_requirement "pydantic" "2.6.4"
-add_or_replace_requirement "open-clip-torch" "2.24.0"
+add_or_replace_requirement "open-clip-torch" "2.32.0"
 add_or_replace_requirement "diffusers" "0.32.0"
 add_or_replace_requirement "dill" "0.4.0"
 add_or_replace_requirement "onnxruntime-gpu" "1.17.1"
@@ -233,7 +225,6 @@ if [ ! -x "venv/bin/activate" ]; then
       python -m pip install --upgrade "$pkg"
     fi
   done
-
   echo "📦 venv 安装完成 ✅"
   deactivate
 
