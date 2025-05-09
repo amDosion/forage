@@ -148,31 +148,32 @@ else
 fi
 
 # ---------------------------------------------------
-# requirements_versions.txt 修复（支持用户版本优先）
+# requirements_versions.txt 修复（支持用户增量覆盖）
 # ---------------------------------------------------
-echo "🔧 [5] 补丁修正 requirements_versions.txt..."
+echo "🔧 [5] 修复 requirements_versions.txt（支持用户增量覆盖）..."
 REQ_FILE="$TARGET_DIR/requirements_versions.txt"
 USER_PIN_FILE="$TARGET_DIR/requirements_user_pins.txt"
 
-# 初始化主依赖列表和用户覆盖文件
+# 确保主依赖文件存在
 touch "$REQ_FILE"
 
+# 如果用户补丁文件不存在，则生成模板
 if [ ! -f "$USER_PIN_FILE" ]; then
   echo "📄 未检测到 $USER_PIN_FILE，已创建空模板（用于用户自定义依赖版本）"
   cat <<EOF > "$USER_PIN_FILE"
-# 在此文件中手动指定依赖版本将覆盖默认推荐
+# 在此文件中手动指定依赖版本将覆盖 requirements_versions.txt 中的默认值
 # 示例：
 # torch==2.6.0
 # xformers==0.0.29
 EOF
 fi
 
-# 读取用户锁定版本
+# 获取用户锁定版本（例如：get_user_pinned_version torch）
 get_user_pinned_version() {
   grep -E "^$1==[^=]+$" "$USER_PIN_FILE" | cut -d '=' -f 3
 }
 
-# 主处理函数
+# 添加或替换一行依赖（用于主文件更新）
 add_or_replace_requirement() {
   local package="$1"
   local recommended_version="$2"
@@ -185,46 +186,42 @@ add_or_replace_requirement() {
     local current_version
     current_version=$(grep "^$package==" "$REQ_FILE" | cut -d '=' -f 3)
     if [ "$current_version" != "$final_version" ]; then
-      echo "✏️ 更新 $package: $current_version → $final_version"
+      echo "✏️ 覆盖 $package: $current_version → $final_version"
       sed -i "s|^$package==.*|$package==$final_version|" "$REQ_FILE"
     else
       echo "✅ $package==$final_version 已存在"
     fi
   else
-    echo "➕ 写入缺失依赖: $package==$final_version"
+    echo "➕ 新增依赖: $package==$final_version"
     echo "$package==$final_version" >> "$REQ_FILE"
   fi
 }
 
-# 推荐依赖版本列表（可自定义）
-add_or_replace_requirement "torch" "2.7.0"
-add_or_replace_requirement "xformers" "0.0.30"
-add_or_replace_requirement "insightface" "0.7.3"
-add_or_replace_requirement "torchdiffeq" "0.2.5"
-add_or_replace_requirement "torchsde" "0.2.6"
-add_or_replace_requirement "protobuf" "4.25.3"
-add_or_replace_requirement "pydantic" "2.6.4"
-add_or_replace_requirement "open-clip-torch" "2.32.0"
-add_or_replace_requirement "diffusers" "0.32.0"
-add_or_replace_requirement "dill" "0.4.0"
-add_or_replace_requirement "onnxruntime-gpu" "1.17.1"
-add_or_replace_requirement "controlnet-aux" "0.0.10"
-
-# 特殊处理：GitPython 自动判断版本
-check_gitpython_version() {
-  local required_version="3.1.41"
-  if python3 -c "import git, sys; from packaging import version; sys.exit(0) if version.parse(git.__version__) >= version.parse('$required_version') else sys.exit(1)" 2>/dev/null; then
-    echo "✅ GitPython >= $required_version 已存在"
-  else
-    echo "🔧 添加 GitPython==$required_version"
-    add_or_replace_requirement "GitPython" "$required_version"
+# 遍历 requirements_versions.txt 并尝试用用户版本覆盖
+while IFS= read -r line; do
+  [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+  if [[ "$line" =~ ^([^=]+)==([^=]+)$ ]]; then
+    package="${BASH_REMATCH[1]}"
+    recommended_version="${BASH_REMATCH[2]}"
+    add_or_replace_requirement "$package" "$recommended_version"
   fi
-}
-check_gitpython_version
+done < "$REQ_FILE"
 
-# 输出核心依赖版本（最终写入的）
-echo "📦 最终依赖列表如下："
-grep -E '^(torch|xformers|diffusers|transformers|torchdiffeq|torchsde|GitPython|protobuf|pydantic|open-clip-torch)=' "$REQ_FILE" | sort
+# 处理 user_pins 中新增的依赖（主文件中尚不存在）
+while IFS= read -r line; do
+  [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+  if [[ "$line" =~ ^([^=]+)==([^=]+)$ ]]; then
+    package="${BASH_REMATCH[1]}"
+    if ! grep -q "^$package==" "$REQ_FILE"; then
+      echo "➕ 来自用户的新增依赖: $line"
+      echo "$line" >> "$REQ_FILE"
+    fi
+  fi
+done < "$USER_PIN_FILE"
+
+# 输出最终依赖版本
+echo "📦 最终依赖版本 (requirements_versions.txt)："
+cat "$REQ_FILE" | grep -v '^#' | sort
 
 # ---------------------------------------------------
 # Python 虚拟环境
