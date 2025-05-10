@@ -1,7 +1,7 @@
 # ======== 插件 extensions/ ========
 extensions/sd-forge-layerdiffuse,https://github.com/lllyasviel/sd-forge-layerdiffuse.git
 extensions/sd-webui-infinite-image-browsing,https://github.com/zanllp/sd-webui-infinite-image-browsing.git
-extensions/sd-webui-prompt-all-in-one,https://github.com/Physton/sd-webui-prompt-all-in-one.git
+extensions/sd-webui-prompt-all-in-one,https://github.com/amDosion/sd-webui-prompt-all-in-one.git
 extensions/sd-webui-wd14-tagger,https://github.com/Akegarasu/sd-webui-wd14-tagger.git
 extensions/stable-diffusion-webui-localization-zh_Hans,https://github.com/hanamizuki-ai/stable-diffusion-webui-localization-zh_Hans.git
 extensions/ultimate-upscale-for-automatic1111,https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git
