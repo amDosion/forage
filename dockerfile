@@ -35,6 +35,13 @@ RUN echo "🔍 验证 CUDA 编译器版本：" && nvcc --version && \
     python3 -c "import torch; print('✔️ torch:', torch.__version__, '| CUDA:', torch.version.cuda)"
 
 # ===============================
+# 🚩 使用 Conda 降级 SQLite 以保持兼容
+# ===============================
+RUN echo "🔧 降级 Conda 内 SQLite 到 3.42.0..." && \
+    conda install -y sqlite=3.42 && \
+    echo "✅ SQLite 版本：" && sqlite3 --version
+
+# ===============================
 # 🚩 创建非 root 用户 webui
 # ===============================
 RUN echo "🔧 正在创建非 root 用户 webui..." && \
