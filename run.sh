@@ -151,7 +151,7 @@ fi
 cd "$TARGET_DIR" || { echo "❌ 进入目标目录失败"; exit 1; }
 
 # ---------------------------------------------------
-# requirements_versions.txt 修复（支持 user_pins 增量覆盖）
+# requirements_versions.txt 修复（支持 user_pins 增量覆盖 + 去重）
 # ---------------------------------------------------
 echo "🔧 [5] 智能修正 requirements_versions.txt（支持 user_pins 增量覆盖）..."
 
@@ -162,37 +162,37 @@ USER_PIN_FILE="$PWD/requirements_user_pins.txt"
 touch "$REQ_FILE"
 [ ! -f "$USER_PIN_FILE" ] && touch "$USER_PIN_FILE"
 
-# 🧼 清理 CRLF（兼容 Windows）
+# 🧼 清理 CRLF（兼容 Windows 上传）
 dos2unix_clean_file() {
   local f="$1"
   sed -i 's/\r$//' "$f"
 }
 dos2unix_clean_file "$USER_PIN_FILE"
 
-# 📎 确保 echo 追加时有换行，避免拼接
+# 📎 确保 echo 追加前文件有换行，避免拼接
 ensure_line_ending() {
   sed -i -e '$a\' "$REQ_FILE"
 }
 
-# 🔁 增量替换或追加逻辑（兼容裸包名）
+# 🔁 增量覆盖逻辑（支持清除裸包名和旧版本）
 add_or_replace_requirement() {
   local package="$1"
   local version="$2"
 
-  # 删除所有现存同名条目（无论是否含版本号）
+  # 删除所有旧版本和裸名记录
   sed -i "/^$package\(==.*\)\?$/d" "$REQ_FILE"
 
-  # 追加新条目（自动换行安全）
+  # 追加新版本（换行保护）
   ensure_line_ending
   echo "➕ 追加: $package==$version"
   echo "$package==$version" >> "$REQ_FILE"
 }
 
-# 📥 应用 user_pins（增强正则匹配）
+# 📥 从 user_pins 读取内容并增量应用
 user_pin_count=0
 while IFS= read -r line || [[ -n "$line" ]]; do
   [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-  if [[ "$line" =~ ^([a-zA-Z0-9_-]+)==([a-zA-Z0-9.+_-]+)$ ]]; then
+  if [[ "$line" =~ ^([a-zA-Z0-9._+-]+)==([a-zA-Z0-9._+-]+)$ ]]; then
     pkg="${BASH_REMATCH[1]}"
     ver="${BASH_REMATCH[2]}"
     add_or_replace_requirement "$pkg" "$ver"
@@ -202,7 +202,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   fi
 done < "$USER_PIN_FILE"
 
-[ "$user_pin_count" -eq 0 ] && echo "ℹ️ requirements_user_pins.txt 为空"
+[ "$user_pin_count" -eq 0 ] && echo "ℹ️ requirements_user_pins.txt 为空（未指定任何用户锁定版本）"
 
 # 🧹 清理注释和空行
 echo "🧹 清理注释内容..."
@@ -210,10 +210,15 @@ CLEANED_REQ_FILE="${REQ_FILE}.cleaned"
 sed -e 's/#.*//' -e '/^\s*$/d' "$REQ_FILE" > "$CLEANED_REQ_FILE"
 mv "$CLEANED_REQ_FILE" "$REQ_FILE"
 
+# ✅ 去重：保留最后一条同名依赖
+echo "🧹 去重重复依赖项..."
+DEDUPED_REQ_FILE="${REQ_FILE}.deduped"
+tac "$REQ_FILE" | awk -F== '!seen[$1]++' | tac > "$DEDUPED_REQ_FILE"
+mv "$DEDUPED_REQ_FILE" "$REQ_FILE"
+
 # 📄 输出最终依赖
 echo "📄 当前依赖列表："
 cat "$REQ_FILE"
-
 
 # ---------------------------------------------------
 # Python 虚拟环境
