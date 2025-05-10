@@ -7,8 +7,9 @@
 | **resources.txt**   | 由 `run.sh` 自动下载至对应 WebUI 根目录                                                            |
 | **目录挂载（volumes）** | 映射宿主机目录，便于持久化输出 / 模型 / 缓存                                                      |
 | **GPU支持**           | `deploy.resources.reservations.devices` 用于 Docker 原生 GPU 支持                               |
-| **CUDA 12.6 支持**    | 基于 `pytorch/pytorch:2.6.0-cuda12.6-cudnn9-devel` 镜像构建                                    |
+| **CUDA 12.8 支持**    | 基于 `pytorch:2.7.0-cuda12.8-cudnn9-devel` 镜像构建                                    |
 
+可以利用变量切换，注意修改requirements_user_pins中的版本
 ---
 
 此表格列出了在使用 Stable Diffusion WebUI 启动脚本时需要注意的关键配置和支持选项。
