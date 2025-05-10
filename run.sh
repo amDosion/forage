@@ -156,8 +156,21 @@ cd "$TARGET_DIR" || { echo "❌ 进入目标目录失败"; exit 1; }
 echo "🔧 [5] 补丁修正 requirements_versions.txt..."
 REQ_FILE="$PWD/requirements_versions.txt"
 USER_PINS_FILE="$PWD/requirements_user_pins.txt"
+
+# 如果用户未提供锁定文件，则自动下载一份默认模板
+if [ ! -f "$USER_PINS_FILE" ]; then
+  echo "🌐 未检测到 $USER_PINS_FILE，尝试从远程仓库下载..."
+  if curl -fsSL -o "$USER_PINS_FILE" "https://raw.githubusercontent.com/amDosion/forage/main/requirements_user_pins.txt"; then
+    echo "✅ 成功下载默认 user_pins 文件 → $USER_PINS_FILE"
+  else
+    echo "⚠️ 下载失败，创建空文件作为占位"
+    touch "$USER_PINS_FILE"
+  fi
+else
+  echo "✅ 已检测到本地 $USER_PINS_FILE，跳过远程下载"
+fi
+
 touch "$REQ_FILE"
-touch "$USER_PINS_FILE"
 
 # 添加或替换某个依赖版本
 add_or_replace_requirement() {
