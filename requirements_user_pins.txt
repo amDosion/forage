@@ -1,8 +1,11 @@
 dill==0.4.0
-onnxruntime-gpu==1.22.0
+onnxruntime-gpu==1.17.1
 controlnet-aux==0.0.10
 diffusers==0.32.0
 xformers==0.0.30
+torchdiffeq==0.2.5
 pytorch_lightning==2.5.1.post0
-protobuf==6.30.2
+protobuf==4.25.7
+albumentations==1.4.3
+olefile==0.46
 open-clip-torch==2.32.0
