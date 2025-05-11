@@ -348,13 +348,14 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
 
   [[ "$target_path" =~ ^#.*$ || -z "$target_path" || -z "$source_url" ]] && continue
 
+  echo "    - 📄 读取资源条目: $target_path ← $source_url"  # ←←← 建议添加此行
+
   # 如果是 extensions 路径则加入映射
   if [[ "$target_path" == extensions/* ]]; then
     full_path="$PWD/$target_path"
     RESOURCE_DECLARED_PATHS["$full_path"]=1
   fi
 done < "$RESOURCE_PATH"
-
 
 # ✅✅✅ 检查本地 extensions 目录中未在 resources.txt 中声明的插件
 EXT_DIR="$PWD/extensions"
@@ -368,6 +369,25 @@ if [ -d "$EXT_DIR" ]; then
     fi
   done
 fi
+
+# 📂 检查声明但本地不存在的插件，并主动克隆
+echo "🧩 检查资源声明中但尚不存在的插件 (extensions/*)..."
+for declared_path in "${!RESOURCE_DECLARED_PATHS[@]}"; do
+  if [ ! -d "$declared_path" ]; then
+    dirname=$(basename "$declared_path")
+    echo "    - 📂 插件声明但目录不存在，准备克隆: $dirname"
+    
+    # 从 resources.txt 中重新找到对应的 source_url（注意用 grep 抽取）
+    matched_line=$(grep "^extensions/$dirname," "$RESOURCE_PATH")
+    source_url=$(echo "$matched_line" | cut -d',' -f2 | xargs)
+
+    if [[ -n "$source_url" ]]; then
+      clone_or_update_repo "extensions/$dirname" "$source_url"
+    else
+      echo "      ⚠️ 无法从 resources.txt 找到 $dirname 的 URL，跳过克隆"
+    fi
+  fi
+done
 
 # 定义函数：克隆或更新 Git 仓库 (支持独立 Git 镜像开关 + 资源控制)
 clone_or_update_repo() {
