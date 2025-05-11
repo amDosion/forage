@@ -128,10 +128,14 @@ if [ "$UI" = "auto" ]; then
 elif [ "$UI" = "forge" ]; then
   TARGET_DIR="/app/webui/sd-webui-forge"
   REPO="https://github.com/lllyasviel/stable-diffusion-webui-forge.git"
+elif [ "$UI" = "fastforge" ]; then
+  TARGET_DIR="/app/webui/sd-webui-fastforge"
+  REPO="https://github.com/LeeAeron/stable-diffusion-webui-fastforge.git"
 else
   echo "❌ Unknown UI: $UI"
   exit 1
 fi
+
 echo "📁 目标目录: $TARGET_DIR"
 echo "🌐 GIT 源: $REPO"
 
