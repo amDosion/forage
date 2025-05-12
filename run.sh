@@ -370,25 +370,6 @@ if [ -d "$EXT_DIR" ]; then
   done
 fi
 
-# 📂 检查声明但本地不存在的插件，并主动克隆
-echo "🧩 检查资源声明中但尚不存在的插件 (extensions/*)..."
-for declared_path in "${!RESOURCE_DECLARED_PATHS[@]}"; do
-  if [ ! -d "$declared_path" ]; then
-    dirname=$(basename "$declared_path")
-    echo "    - 📂 插件声明但目录不存在，准备克隆: $dirname"
-    
-    # 从 resources.txt 中重新找到对应的 source_url（注意用 grep 抽取）
-    matched_line=$(grep "^extensions/$dirname," "$RESOURCE_PATH")
-    source_url=$(echo "$matched_line" | cut -d',' -f2 | xargs)
-
-    if [[ -n "$source_url" ]]; then
-      clone_or_update_repo "extensions/$dirname" "$source_url"
-    else
-      echo "      ⚠️ 无法从 resources.txt 找到 $dirname 的 URL，跳过克隆"
-    fi
-  fi
-done
-
 # 定义函数：克隆或更新 Git 仓库 (支持独立 Git 镜像开关 + 资源控制)
 clone_or_update_repo() {
     # $1: 目标目录, $2: 原始仓库 URL
@@ -508,6 +489,25 @@ should_skip() {
   done
   return 1 # 1 表示不应该跳过 (Bash false)
 }
+
+# 📂 检查声明但本地不存在的插件，并主动克隆
+echo "🧩 检查资源声明中但尚不存在的插件 (extensions/*)..."
+for declared_path in "${!RESOURCE_DECLARED_PATHS[@]}"; do
+  if [ ! -d "$declared_path" ]; then
+    dirname=$(basename "$declared_path")
+    echo "    - 📂 插件声明但目录不存在，准备克隆: $dirname"
+    
+    # 从 resources.txt 中重新找到对应的 source_url（注意用 grep 抽取）
+    matched_line=$(grep "^extensions/$dirname," "$RESOURCE_PATH")
+    source_url=$(echo "$matched_line" | cut -d',' -f2 | xargs)
+
+    if [[ -n "$source_url" ]]; then
+      clone_or_update_repo "extensions/$dirname" "$source_url"
+    else
+      echo "      ⚠️ 无法从 resources.txt 找到 $dirname 的 URL，跳过克隆"
+    fi
+  fi
+done
 
 echo "  - 开始处理 resources.txt 中的条目..."
 # 逐行读取 resources.txt 文件 (逗号分隔: 目标路径,源URL)
