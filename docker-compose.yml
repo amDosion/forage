@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  forge-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: forge-webui:latest
+    container_name: forge-webui
+
+    # 网络配置
+    ports:
+      - "7860:7860"
+
+    # GPU 支持
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # 数据卷挂载
+    volumes:
+      - ./webui:/app/webui                                    # 主数据目录（包含 models, outputs, extensions）
+
+    # 环境变量配置
+    environment:
+      # ===== UI 选择 =====
+      - UI=${UI:-forge}                                       # forge / auto / fastforge
+
+      # ===== 启动参数 =====
+      - ARGS=${ARGS:---xformers --precision autocast --cuda-malloc --cuda-stream --enable-insecure-extension-access --skip-python-version-check --skip-torch-cuda-test --api --listen --theme dark}
+
+      # ===== API Tokens =====
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}                # HuggingFace Token
+      - CIVITAI_API_TOKEN=${CIVITAI_API_TOKEN}                # Civitai Token
+
+      # ===== 下载控制 =====
+      - ENABLE_DOWNLOAD=${ENABLE_DOWNLOAD:-true}              # 全局下载开关
+      - ENABLE_DOWNLOAD_EXTS=${ENABLE_DOWNLOAD_EXTS:-true}    # 扩展插件
+      - ENABLE_DOWNLOAD_MODEL_SD15=${ENABLE_DOWNLOAD_MODEL_SD15:-false}
+      - ENABLE_DOWNLOAD_MODEL_SDXL=${ENABLE_DOWNLOAD_MODEL_SDXL:-false}
+      - ENABLE_DOWNLOAD_MODEL_FLUX=${ENABLE_DOWNLOAD_MODEL_FLUX:-false}
+      - ENABLE_DOWNLOAD_VAE_FLUX=${ENABLE_DOWNLOAD_VAE_FLUX:-false}
+      - ENABLE_DOWNLOAD_TE_FLUX=${ENABLE_DOWNLOAD_TE_FLUX:-false}
+      - ENABLE_DOWNLOAD_CNET_SD15=${ENABLE_DOWNLOAD_CNET_SD15:-false}
+      - ENABLE_DOWNLOAD_CNET_SDXL=${ENABLE_DOWNLOAD_CNET_SDXL:-false}
+      - ENABLE_DOWNLOAD_CNET_FLUX=${ENABLE_DOWNLOAD_CNET_FLUX:-false}
+      - ENABLE_DOWNLOAD_VAE=${ENABLE_DOWNLOAD_VAE:-false}
+      - ENABLE_DOWNLOAD_LORAS=${ENABLE_DOWNLOAD_LORAS:-false}
+      - ENABLE_DOWNLOAD_EMBEDDINGS=${ENABLE_DOWNLOAD_EMBEDDINGS:-false}
+      - ENABLE_DOWNLOAD_UPSCALERS=${ENABLE_DOWNLOAD_UPSCALERS:-false}
+      - ENABLE_DOWNLOAD_TE=${ENABLE_DOWNLOAD_TE:-false}
+
+      # ===== 镜像加速 =====
+      - USE_HF_MIRROR=${USE_HF_MIRROR:-false}                 # HuggingFace 镜像 (hf-mirror.com)
+      - USE_GIT_MIRROR=${USE_GIT_MIRROR:-false}               # Git 镜像 (gitcode.net)
+
+      # ===== 其他配置 =====
+      - AWS_EC2_METADATA_DISABLED=true                        # 禁用 AWS 元数据检测
+
+    # 重启策略
+    restart: unless-stopped
+
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

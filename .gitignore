@@ -1,0 +1,49 @@
+# 环境变量配置文件（包含敏感信息）
+.env
+
+# WebUI 数据目录
+webui/
+
+# 日志文件
+*.log
+launch.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+tmp/
+
+# Docker
+.dockerignore
+
+# Backup
+*.bak
+*.backup
+*_backup
+
+# 其他
+.pytest_cache/
+.mypy_cache/

@@ -269,13 +269,25 @@ if [[ -n "$HUGGINGFACE_TOKEN" ]]; then
   # 检查 huggingface-cli 命令是否存在 (应由 huggingface_hub[cli] 提供)
   if command -v huggingface-cli &>/dev/null; then
       # 正确用法：将 token 作为参数传递给 --token
+      # 临时关闭 set -e，避免 SSL 错误导致脚本退出
+      set +e
       huggingface-cli login --token "$HUGGINGFACE_TOKEN" --add-to-git-credential
+      hf_login_status=$?
+      set -e
       # 检查命令执行是否成功
-      if [ $? -eq 0 ]; then
+      if [ $hf_login_status -eq 0 ]; then
           echo "  - ✅ Hugging Face CLI 登录成功。"
       else
-          # 登录失败通常不会是致命错误，只记录警告
-          echo "  - ⚠️ Hugging Face CLI 登录失败。请检查 Token 是否有效、是否过期或 huggingface-cli 是否工作正常。"
+          # 登录失败，使用备用方案直接写入 token 文件
+          echo "  - ⚠️ Hugging Face CLI 登录失败 (退出码: $hf_login_status)，使用备用方案..."
+          python -c "
+from pathlib import Path
+hf_home = Path.home() / '.cache' / 'huggingface'
+hf_home.mkdir(parents=True, exist_ok=True)
+token_file = hf_home / 'token'
+token_file.write_text('$HUGGINGFACE_TOKEN')
+print('  - ✅ Token 已直接写入配置文件: ' + str(token_file))
+" && echo "  - 💡 HuggingFace Hub 库可以正常使用此 token" || echo "  - ❌ 备用方案也失败了"
       fi
   else
       echo "  - ⚠️ 未找到 huggingface-cli 命令，无法登录。请确保依赖 'huggingface_hub[cli]' 已正确安装在 venv 中。"
