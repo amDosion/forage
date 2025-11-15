@@ -8,6 +8,11 @@ extensions/ultimate-upscale-for-automatic1111,https://github.com/Coyote-A/ultima
 extensions/adetailer,https://github.com/Bing-su/adetailer.git
 extensions/tagcomplete,https://github.com/DominikDoom/a1111-sd-webui-tagcomplete.git
 
+# ======== 新增插件 2025 ========
+extensions/sd-webui-decadetw-auto-prompt-llm,https://github.com/xlinx/sd-webui-decadetw-auto-prompt-llm.git
+extensions/sd-forge-ic-light,https://github.com/huchenlei/sd-forge-ic-light.git
+extensions/sd-forge-animatediff,https://github.com/continue-revolution/sd-forge-animatediff.git
+
 # ========== 主模型（SD 1.5） ==========
 models/Stable-diffusion/SD1.5/v1-5-pruned.safetensors,https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned.safetensors
 
