@@ -66,7 +66,9 @@ RUN echo "🔧 正在创建工作目录并设置权限..." && \
 USER webui
 WORKDIR /app/webui
 RUN echo "✅ 已成功切换至用户：$(whoami)" && \
-    echo "✅ 当前工作目录为：$(pwd)"
+    echo "✅ 当前工作目录为：$(pwd)" && \
+    mkdir -p /home/webui/.config/Ultralytics /home/webui/.config/matplotlib && \
+    echo "✅ 配置目录已创建"
 
 # ===============================
 # 🚩 检查 Python 环境完整性
