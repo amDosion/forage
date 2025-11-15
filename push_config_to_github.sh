@@ -72,16 +72,27 @@ cd repo
 git config user.name "WebUI Automation"
 git config user.email "webui@automation.local"
 
+# 检测运行环境并设置路径
+if [ -f "/.dockerenv" ]; then
+    # 容器内环境
+    BASE_PATH="/app"
+    WEBUI_PATH="/app/webui"
+else
+    # 宿主机环境
+    BASE_PATH="/mnt/user/appdata/webui"
+    WEBUI_PATH="/mnt/user/appdata/webui/webui"
+fi
+
 # 定义需要推送的文件列表
 declare -A FILES_TO_PUSH=(
-    ["/app/run.sh"]="run.sh"
-    ["/app/webui/sd-webui-forge/requirements_user_pins.txt"]="requirements_user_pins.txt"
-    ["/app/webui/sd-webui-forge/resources.txt"]="resources.txt"
+    ["${BASE_PATH}/run.sh"]="run.sh"
+    ["${WEBUI_PATH}/sd-webui-forge/requirements_user_pins.txt"]="requirements_user_pins.txt"
+    ["${WEBUI_PATH}/sd-webui-forge/resources.txt"]="resources.txt"
     ["/tmp/push_files/Dockerfile"]="Dockerfile"
     ["/tmp/push_files/docker-compose.yml"]="docker-compose.yml"
     ["/tmp/push_files/start.sh"]="start.sh"
     ["/tmp/push_files/stop.sh"]="stop.sh"
-    ["/app/push_config_to_github.sh"]="push_config_to_github.sh"
+    ["${BASE_PATH}/push_config_to_github.sh"]="push_config_to_github.sh"
     ["/tmp/push_files/.env.example"]=".env.example"
     ["/tmp/push_files/.gitignore"]=".gitignore"
     ["/tmp/push_files/README.md"]="README.md"
