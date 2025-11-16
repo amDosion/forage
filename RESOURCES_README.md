@@ -4,21 +4,11 @@
 
 本项目使用 Python 配置文件 (`resources_config.py`) 来管理所有模型和扩展资源，提供结构化、可维护的配置管理。
 
-## 🆚 新旧对比
+## 🎯 设计理念
 
-### 旧方式 (resources.txt)
-```
-# 简单的文本文件
-models/ControlNet/control_v11p_sd15_canny.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_canny.pth
-```
+**单一数据源**：resources_config.py 是唯一的配置来源，run.sh 直接读取 Python 输出。
 
-**缺点：**
-- ❌ 无元数据（许可证、大小、描述）
-- ❌ 难以验证和管理
-- ❌ 无法动态生成配置
-- ❌ 容易出错
-
-### 新方式 (resources_config.py)
+### 配置方式 (resources_config.py)
 ```python
 ResourceInfo(
     target_path="models/ControlNet/control_v11p_sd15_canny.pth",
@@ -35,8 +25,9 @@ ResourceInfo(
 - ✅ **完整元数据** - 许可证、大小、描述、优先级
 - ✅ **类型安全** - 枚举类型防止错误
 - ✅ **自动验证** - 检测重复、许可证冲突
-- ✅ **动态生成** - 自动生成兼容的 resources.txt
+- ✅ **单一数据源** - run.sh 直接读取，无需中间文件
 - ✅ **易于扩展** - 添加新字段只需修改 dataclass
+- ✅ **专业架构** - 避免文件重复，Python 驱动配置
 
 ## 🎯 主要功能
 

@@ -378,20 +378,28 @@ def validate_resources() -> bool:
     return True
 
 
+def output_csv() -> None:
+    """直接输出 CSV 格式（供 run.sh 使用）"""
+    all_resources = EXTENSIONS + CONTROLNET_SD15 + CONTROLNET_SDXL + VAE_MODELS + UPSCALERS
+
+    for res in all_resources:
+        if res.enabled:
+            print(f"{res.target_path},{res.source_url}")
+
+
 if __name__ == "__main__":
-    # 验证配置
-    if validate_resources():
-        # 生成 resources.txt
-        content = generate_resources_txt()
+    import sys
 
-        # 输出到文件
-        with open("resources.txt", "w", encoding="utf-8") as f:
-            f.write(content)
-
-        print("✅ resources.txt 已生成")
-
-        # 统计信息
-        all_res = EXTENSIONS + CONTROLNET_SD15 + CONTROLNET_SDXL + VAE_MODELS + UPSCALERS
-        total_size = sum(res.size_mb for res in all_res if res.size_mb and res.enabled)
-        print(f"📊 总资源数: {len(all_res)}")
-        print(f"📦 预估总大小: {total_size/1024:.1f} GB")
+    # 检查命令行参数
+    if len(sys.argv) > 1 and sys.argv[1] == "--csv":
+        # 直接输出 CSV 格式（用于 run.sh）
+        output_csv()
+    else:
+        # 验证配置
+        if validate_resources():
+            # 统计信息
+            all_res = EXTENSIONS + CONTROLNET_SD15 + CONTROLNET_SDXL + VAE_MODELS + UPSCALERS
+            total_size = sum(res.size_mb for res in all_res if res.size_mb and res.enabled)
+            print(f"✅ 资源配置验证通过（共 {len(all_res)} 个资源）")
+            print(f"📊 总资源数: {len(all_res)}")
+            print(f"📦 预估总大小: {total_size/1024:.1f} GB")

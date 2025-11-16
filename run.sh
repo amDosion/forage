@@ -374,59 +374,53 @@ else
 fi
 
 # ==================================================
-# 资源下载 (使用 resources.txt)
+# 资源下载 (使用 resources_config.py)
 # ==================================================
-echo "📦 [9] 处理资源下载 (基于 $PWD/resources.txt 和下载开关)..."
-RESOURCE_PATH="$PWD/resources.txt"
+echo "📦 [9] 处理资源下载 (基于 resources_config.py 和下载开关)..."
+RESOURCE_CONFIG="$PWD/resources_config.py"
 
-# ✅ 然后继续执行原来的资源遍历逻辑
-echo "  - 开始处理 resources.txt 中的条目..."
-
-# 检查资源文件是否存在，如果不存在则尝试下载默认版本
-if [ ! -f "$RESOURCE_PATH" ]; then
-  # 指定默认资源文件的 URL
-  DEFAULT_RESOURCE_URL="https://raw.githubusercontent.com/amDosion/forage/main/resources.txt"
-  echo "  - 未找到本地 resources.txt，尝试从 ${DEFAULT_RESOURCE_URL} 下载..."
-  # 使用 curl 下载，确保失败时不输出错误页面 (-f)，静默 (-s)，跟随重定向 (-L)
-  curl -fsSL -o "$RESOURCE_PATH" "$DEFAULT_RESOURCE_URL"
+# 检查 resources_config.py 是否存在
+if [ ! -f "$RESOURCE_CONFIG" ]; then
+  # 尝试从远程下载 resources_config.py
+  DEFAULT_CONFIG_URL="https://raw.githubusercontent.com/amDosion/forage/main/resources_config.py"
+  echo "  - 未找到本地 resources_config.py，尝试从 ${DEFAULT_CONFIG_URL} 下载..."
+  curl -fsSL -o "$RESOURCE_CONFIG" "$DEFAULT_CONFIG_URL"
   if [ $? -eq 0 ]; then
-      echo "  - ✅ 默认 resources.txt 下载成功。"
+      echo "  - ✅ 默认 resources_config.py 下载成功。"
   else
-      echo "  - ❌ 下载默认 resources.txt 失败。请手动将资源文件放在 ${RESOURCE_PATH} 或检查网络/URL。"
-      # 创建一个空文件以避免后续读取错误，但不会下载任何内容
-      touch "$RESOURCE_PATH"
-      echo "  - 已创建空的 resources.txt 文件以继续，但不会下载任何资源。"
+      echo "  - ❌ 下载 resources_config.py 失败。请检查网络或手动放置配置文件。"
+      echo "  - 跳过资源下载步骤。"
+      exit 1
   fi
 else
-  echo "  - ✅ 使用本地已存在的 resources.txt: ${RESOURCE_PATH}"
+  echo "  - ✅ 使用本地 resources_config.py: ${RESOURCE_CONFIG}"
 fi
 
-# ✅ ✅ ✅ 添加此段：记录 resources.txt 中声明的插件路径
+# ✅ ✅ ✅ 记录 resources_config.py 中声明的插件路径
 declare -A RESOURCE_DECLARED_PATHS
 
+echo "  - 读取 resources_config.py 中的资源列表..."
 while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
   target_path=$(echo "$target_path" | xargs)
   source_url=$(echo "$source_url" | xargs)
 
-  [[ "$target_path" =~ ^#.*$ || -z "$target_path" || -z "$source_url" ]] && continue
-
-  echo "    - 📄 读取资源条目: $target_path ← $source_url"  # ←←← 建议添加此行
+  [[ -z "$target_path" || -z "$source_url" ]] && continue
 
   # 如果是 extensions 路径则加入映射
   if [[ "$target_path" == extensions/* ]]; then
     full_path="$PWD/$target_path"
     RESOURCE_DECLARED_PATHS["$full_path"]=1
   fi
-done < "$RESOURCE_PATH"
+done < <(python3 "$RESOURCE_CONFIG" --csv)
 
-# ✅✅✅ 检查本地 extensions 目录中未在 resources.txt 中声明的插件
+# ✅✅✅ 检查本地 extensions 目录中未在 resources_config.py 中声明的插件
 EXT_DIR="$PWD/extensions"
 if [ -d "$EXT_DIR" ]; then
   echo "🧹 检查本地 extensions/ 中未声明的插件..."
   for existing_path in "$EXT_DIR"/*; do
     if [ -d "$existing_path" ]; then
       if [[ -z "${RESOURCE_DECLARED_PATHS[$existing_path]}" ]]; then
-        echo "    - ⛔ 插件未在 resources.txt 声明，跳过处理: $(basename "$existing_path")"
+        echo "    - ⛔ 插件未在 resources_config.py 声明，跳过处理: $(basename "$existing_path")"
       fi
     fi
   done
@@ -442,11 +436,11 @@ clone_or_update_repo() {
 
     dirname=$(basename "$dir")
 
-    # ✅ 新增：只允许处理 resources.txt 中声明的插件路径
-    if [[ -n "$RESOURCE_PATH" && -n "${RESOURCE_DECLARED_PATHS[$full_path]}" ]]; then
+    # ✅ 新增：只允许处理 resources_config.py 中声明的插件路径
+    if [[ -n "$RESOURCE_CONFIG" && -n "${RESOURCE_DECLARED_PATHS[$full_path]}" ]]; then
         : # 路径被声明，继续
     else
-        echo "    - ⚠️ 插件未在 resources.txt 中声明，跳过 Git 操作: $dirname"
+        echo "    - ⚠️ 插件未在 resources_config.py 中声明，跳过 Git 操作: $dirname"
         return
     fi
 
@@ -558,28 +552,28 @@ for declared_path in "${!RESOURCE_DECLARED_PATHS[@]}"; do
   if [ ! -d "$declared_path" ]; then
     dirname=$(basename "$declared_path")
     echo "    - 📂 插件声明但目录不存在，准备克隆: $dirname"
-    
-    # 从 resources.txt 中重新找到对应的 source_url（注意用 grep 抽取）
-    matched_line=$(grep "^extensions/$dirname," "$RESOURCE_PATH")
+
+    # 从 resources_config.py 中找到对应的 source_url
+    matched_line=$(python3 "$RESOURCE_CONFIG" --csv | grep "^extensions/$dirname,")
     source_url=$(echo "$matched_line" | cut -d',' -f2 | xargs)
 
     if [[ -n "$source_url" ]]; then
       clone_or_update_repo "extensions/$dirname" "$source_url"
     else
-      echo "      ⚠️ 无法从 resources.txt 找到 $dirname 的 URL，跳过克隆"
+      echo "      ⚠️ 无法从 resources_config.py 找到 $dirname 的 URL，跳过克隆"
     fi
   fi
 done
 
-echo "  - 开始处理 resources.txt 中的条目..."
-# 逐行读取 resources.txt 文件 (逗号分隔: 目标路径,源URL)
+echo "  - 开始处理 resources_config.py 中的条目..."
+# 逐行读取 Python 脚本输出 (逗号分隔: 目标路径,源URL)
 while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
   # 清理路径和 URL 的前后空格
   target_path=$(echo "$target_path" | xargs)
   source_url=$(echo "$source_url" | xargs)
 
-  # 跳过注释行 (# 开头) 或空行 (路径或 URL 为空)
-  [[ "$target_path" =~ ^#.*$ || -z "$target_path" || -z "$source_url" ]] && continue
+  # 跳过空行 (路径或 URL 为空)
+  [[ -z "$target_path" || -z "$source_url" ]] && continue
 
   # 在目标路径前加上 $PWD
   full_target_path="$PWD/$target_path"
@@ -675,7 +669,7 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
         fi
         ;;
   esac # 结束 case
-done < "$RESOURCE_PATH" # 从资源文件读取
+done < <(python3 "$RESOURCE_CONFIG" --csv) # 从 resources_config.py 读取
 
 # ---------------------------------------------------
 # 🔥 启动最终服务（FIXED!）
