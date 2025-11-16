@@ -12,18 +12,40 @@ services:
     ports:
       - "7860:7860"
 
+    # ========== 性能优化配置 ==========
+    shm_size: '96gb'
+    ipc: host
+
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack:
+        soft: 67108864
+        hard: 67108864
+
     # GPU 支持
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: all
-              capabilities: [gpu]
+              device_ids: ['0']
+              count: 1
+              capabilities: [gpu, compute, utility]
 
     # 数据卷挂载
     volumes:
-      - ./webui:/app/webui                                    # 主数据目录（包含 models, outputs, extensions）
+      - /mnt/user/webui-models/webui:/app/webui               # 主数据目录
+      - /mnt/user/cloud/soft/新建文件夹/models:/app/webui/sd-webui-forge/models  # 模型目录
+      - /mnt/user/webui-models/outputs:/app/webui/outputs     # 输出目录
+
+    # ========== tmpfs 内存加速 ==========
+    tmpfs:
+      - /tmp:size=64G,mode=1777
+      - /app/webui/tmp:size=16G,mode=0777
+      - /home/webui/.cache:size=8G,mode=0777
+      - /app/webui/extensions-builtin:size=2G,mode=0777
 
     # 环境变量配置
     environment:
@@ -61,6 +83,20 @@ services:
       # ===== 其他配置 =====
       - AWS_EC2_METADATA_DISABLED=true                        # 禁用 AWS 元数据检测
 
+      # ========== CUDA/PyTorch 性能优化 ==========
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512,garbage_collection_threshold:0.6,expandable_segments:True
+      - CUDA_LAUNCH_BLOCKING=0
+      - TORCH_CUDNN_V8_API_ENABLED=1
+      - CUDA_MODULE_LOADING=LAZY
+      - PYTORCH_NVFUSER_DISABLE_FALLBACK=1
+      - PYTORCH_JIT=1
+
+      # ========== 内存优化 ==========
+      - MALLOC_TRIM_THRESHOLD_=100000
+      - MALLOC_MMAP_THRESHOLD_=100000
+      - OMP_NUM_THREADS=16
+      - MKL_NUM_THREADS=16
+
     # 重启策略
     restart: unless-stopped
 
@@ -68,5 +104,5 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "100m"
+        max-file: "10"

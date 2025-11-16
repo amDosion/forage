@@ -136,14 +136,8 @@ if [ "$UI" = "auto" ]; then
 elif [ "$UI" = "forge" ]; then
   TARGET_DIR="/app/webui/sd-webui-forge"
   REPO="https://github.com/lllyasviel/stable-diffusion-webui-forge.git"
-elif [ "$UI" = "reforge" ]; then
-  TARGET_DIR="/app/webui/sd-webui-reforge"
-  REPO="https://github.com/Panchovix/stable-diffusion-webui-reForge.git"
-elif [ "$UI" = "fastforge" ]; then
-  TARGET_DIR="/app/webui/sd-webui-fastforge"
-  REPO="https://github.com/LeeAeron/stable-diffusion-webui-fastforge.git"
 else
-  echo "❌ Unknown UI: $UI"
+  echo "❌ Unknown UI: $UI (支持的选项: auto, forge)"
   exit 1
 fi
 
@@ -156,6 +150,9 @@ echo "🌐 GIT 源: $REPO"
 if [ -d "$TARGET_DIR/.git" ]; then
   echo "🔁 仓库已存在，执行 git pull..."
   git -C "$TARGET_DIR" pull --ff-only || echo "⚠️ Git pull failed"
+elif [ -d "$TARGET_DIR" ]; then
+  echo "✅ 目录 $TARGET_DIR 已存在，跳过克隆"
+  [ -f "$TARGET_DIR/webui.sh" ] && chmod +x "$TARGET_DIR/webui.sh"
 else
   echo "📥 Clone 仓库..."
   git clone "$REPO" "$TARGET_DIR"
@@ -168,72 +165,91 @@ cd "$TARGET_DIR" || { echo "❌ 进入目标目录失败"; exit 1; }
 # ---------------------------------------------------
 # requirements_versions.txt 修复
 # ---------------------------------------------------
-echo "🔧 [5] 补丁修正 requirements_versions.txt..."
+echo "🔧 [5] 处理依赖文件..."
 REQ_FILE="$PWD/requirements_versions.txt"
 USER_PINS_FILE="$PWD/requirements_user_pins.txt"
 
-# 如果用户未提供锁定文件，则自动下载一份默认模板
-if [ ! -f "$USER_PINS_FILE" ]; then
-  echo "🌐 未检测到 $USER_PINS_FILE，尝试从远程仓库下载..."
-  if curl -fsSL -o "$USER_PINS_FILE" "https://raw.githubusercontent.com/amDosion/forage/main/requirements_user_pins.txt"; then
-    echo "✅ 成功下载默认 user_pins 文件 → $USER_PINS_FILE"
+# 只对 forge 版本应用自定义依赖锁定，其他版本使用原生依赖
+if [ "$UI" = "forge" ]; then
+  echo "📌 检测到 Forge 版本，应用自定义依赖锁定..."
+
+  # 检查是否有写入权限
+  if [ ! -w "$PWD" ]; then
+    echo "⚠️ 当前目录无写入权限，跳过自定义依赖锁定，使用 Forge 原生依赖"
   else
-    echo "⚠️ 下载失败，创建空文件作为占位"
-    touch "$USER_PINS_FILE"
+    # 如果用户未提供锁定文件，则自动下载一份默认模板
+    if [ ! -f "$USER_PINS_FILE" ]; then
+      echo "🌐 未检测到 $USER_PINS_FILE，尝试从远程仓库下载..."
+      if curl -fsSL -o "$USER_PINS_FILE" "https://raw.githubusercontent.com/amDosion/forage/main/requirements_user_pins.txt" 2>/dev/null; then
+        echo "✅ 成功下载默认 user_pins 文件 → $USER_PINS_FILE"
+      else
+        echo "⚠️ 下载失败或无权限，跳过 user_pins 文件创建"
+      fi
+    else
+      echo "✅ 已检测到本地 $USER_PINS_FILE，跳过远程下载"
+    fi
+
+    touch "$REQ_FILE" 2>/dev/null || true
+
+    # 添加或替换某个依赖版本
+    add_or_replace_requirement() {
+      local package="$1"
+      local version="$2"
+      if grep -q "^$package==" "$REQ_FILE" 2>/dev/null; then
+        echo "🔁 替换: $package==... → $package==$version"
+        sed -i "s|^$package==.*|$package==$version|" "$REQ_FILE" 2>/dev/null || true
+      else
+        echo "➕ 追加: $package==$version"
+        echo "$package==$version" >> "$REQ_FILE" 2>/dev/null || true
+      fi
+    }
+
+    # 从文件读取用户锁定版本（支持增量覆盖）
+    if [ -f "$USER_PINS_FILE" ]; then
+      echo "📥 读取用户自定义依赖版本..."
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+        if [[ "$line" =~ ^([a-zA-Z0-9._+-]+)==([a-zA-Z0-9._+-]+)$ ]]; then
+          package="${BASH_REMATCH[1]}"
+          version="${BASH_REMATCH[2]}"
+          add_or_replace_requirement "$package" "$version"
+        else
+          echo "⚠️ 跳过无效行: $line"
+        fi
+      done < "$USER_PINS_FILE"
+    fi
+
+    # 🧹 清理注释和空行
+    if [ -f "$REQ_FILE" ]; then
+      echo "🧹 清理注释内容..."
+      CLEANED_REQ_FILE="${REQ_FILE}.cleaned"
+      sed 's/#.*//' "$REQ_FILE" | sed '/^\s*$/d' > "$CLEANED_REQ_FILE" 2>/dev/null && mv "$CLEANED_REQ_FILE" "$REQ_FILE" 2>/dev/null || true
+
+      # ♻️ 去重（按包名保留最后一次）
+      echo "🧹 去重重复依赖项..."
+      DEDUPED_FILE="${REQ_FILE}.deduped"
+      tac "$REQ_FILE" | awk -F== '!seen[$1]++' | tac > "$DEDUPED_FILE" 2>/dev/null && mv "$DEDUPED_FILE" "$REQ_FILE" 2>/dev/null || true
+
+      # ✅ 输出最终依赖列表
+      echo "📄 Forge 最终依赖列表如下:"
+      cat "$REQ_FILE" 2>/dev/null || echo "⚠️ 无法读取依赖文件"
+    fi
   fi
 else
-  echo "✅ 已检测到本地 $USER_PINS_FILE，跳过远程下载"
+  echo "📌 检测到 $UI 版本，使用原生依赖文件"
+  if [ -f "$REQ_FILE" ]; then
+    echo "✅ 发现原生 requirements_versions.txt"
+  else
+    echo "⚠️ 未找到 requirements_versions.txt"
+  fi
 fi
-
-touch "$REQ_FILE"
-
-# 添加或替换某个依赖版本
-add_or_replace_requirement() {
-  local package="$1"
-  local version="$2"
-  if grep -q "^$package==" "$REQ_FILE"; then
-    echo "🔁 替换: $package==... → $package==$version"
-    sed -i "s|^$package==.*|$package==$version|" "$REQ_FILE"
-  else
-    echo "➕ 追加: $package==$version"
-    echo "$package==$version" >> "$REQ_FILE"
-  fi
-}
-
-# 从文件读取用户锁定版本（支持增量覆盖）
-echo "📥 读取用户自定义依赖版本..."
-while IFS= read -r line || [[ -n "$line" ]]; do
-  [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-  if [[ "$line" =~ ^([a-zA-Z0-9._+-]+)==([a-zA-Z0-9._+-]+)$ ]]; then
-    package="${BASH_REMATCH[1]}"
-    version="${BASH_REMATCH[2]}"
-    add_or_replace_requirement "$package" "$version"
-  else
-    echo "⚠️ 跳过无效行: $line"
-  fi
-done < "$USER_PINS_FILE"
-
-# 🧹 清理注释和空行
-echo "🧹 清理注释内容..."
-CLEANED_REQ_FILE="${REQ_FILE}.cleaned"
-sed 's/#.*//' "$REQ_FILE" | sed '/^\s*$/d' > "$CLEANED_REQ_FILE"
-mv "$CLEANED_REQ_FILE" "$REQ_FILE"
-
-# ♻️ 去重（按包名保留最后一次）
-echo "🧹 去重重复依赖项..."
-DEDUPED_FILE="${REQ_FILE}.deduped"
-tac "$REQ_FILE" | awk -F== '!seen[$1]++' | tac > "$DEDUPED_FILE"
-mv "$DEDUPED_FILE" "$REQ_FILE"
-
-# ✅ 输出最终依赖列表
-echo "📄 最终依赖列表如下："
-cat "$REQ_FILE"
 
 # ---------------------------------------------------
 # Python 虚拟环境
 # ---------------------------------------------------
 cd "$TARGET_DIR"
-chmod -R 777 .
+# 修改权限(排除 venv 目录以加快速度)
+find . -maxdepth 1 ! -name venv ! -name . -exec chmod -R 777 {} + 2>/dev/null || true
 
 echo "🐍 [6] 虚拟环境检查..."
 
@@ -255,7 +271,7 @@ if python -m pip show insightface | grep -q "Version"; then
   echo "✅ insightface 已安装，跳过安装"
 else
   echo "📦 安装 insightface..."
-  python -m pip install --upgrade insightface
+  python -m pip install --upgrade insightface || echo "⚠️ insightface 安装失败，跳过（非必需组件）"
 fi
 
 echo "📦 venv 安装完成 ✅"
@@ -268,6 +284,20 @@ fi
 echo "🔧 激活 venv..."
 # shellcheck source=/dev/null
 source venv/bin/activate
+
+# ==================================================
+# 依赖检查 (每次启动都检查)
+# ==================================================
+echo "🔧 [6.2] 检查必要依赖..."
+
+echo "🔍 检查 huggingface_hub 是否已安装..."
+if python -m pip show huggingface_hub | grep -q "Version"; then
+  echo "✅ huggingface_hub 已安装，跳过安装"
+else
+  echo "📦 安装 huggingface_hub..."
+  python -m pip install --upgrade huggingface_hub
+fi
+
 # ==================================================
 # Token 处理 (Hugging Face, Civitai)
 # ==================================================
@@ -301,7 +331,16 @@ print('  - ✅ Token 已直接写入配置文件: ' + str(token_file))
 " && echo "  - 💡 HuggingFace Hub 库可以正常使用此 token" || echo "  - ❌ 备用方案也失败了"
       fi
   else
-      echo "  - ⚠️ 未找到 huggingface-cli 命令，无法登录。请确保依赖 'huggingface_hub[cli]' 已正确安装在 venv 中。"
+      # huggingface-cli 命令不存在，直接使用备用方案写入 token 文件
+      echo "  - ⚠️ 未找到 huggingface-cli 命令，使用备用方案直接写入 token..."
+      python -c "
+from pathlib import Path
+hf_home = Path.home() / '.cache' / 'huggingface'
+hf_home.mkdir(parents=True, exist_ok=True)
+token_file = hf_home / 'token'
+token_file.write_text('$HUGGINGFACE_TOKEN')
+print('  - ✅ Token 已直接写入配置文件: ' + str(token_file))
+" && echo "  - 💡 HuggingFace Hub 库可以正常使用此 token" || echo "  - ❌ 备用方案失败了"
   fi
 else
   # 如果未提供 Token
@@ -581,7 +620,7 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
         download_with_progress "$target_path" "$source_url" "FLUX VAE" "$ENABLE_DOWNLOAD_VAE_FLUX" # Use specific FLUX VAE switch
         ;;
 
-    "$PWD/models/VAE/*") # Other VAEs
+    "$PWD/models/VAE/"*) # Other VAEs
         download_with_progress "$target_path" "$source_url" "VAE Model" "$ENABLE_DOWNLOAD_VAE"
         ;;
 
@@ -609,17 +648,17 @@ while IFS=, read -r target_path source_url || [[ -n "$target_path" ]]; do
     ;;
 
     # 6. LoRA and related models
-    "$PWD/models/Lora/*" | "$PWD/models/LyCORIS/*" | "$PWD/models/LoCon/*")
+    "$PWD/models/Lora/"* | "$PWD/models/LyCORIS/"* | "$PWD/models/LoCon/"*)
         download_with_progress "$target_path" "$source_url" "LoRA/LyCORIS" "$ENABLE_DOWNLOAD_LORAS"
         ;;
 
     # 7. Embeddings / Textual Inversion
-    "$PWD/models/TextualInversion/*" | "$PWD/embeddings/*")
+    "$PWD/models/TextualInversion/"* | "$PWD/embeddings/"*)
        download_with_progress "$target_path" "$source_url" "Embedding/Textual Inversion" "$ENABLE_DOWNLOAD_EMBEDDINGS"
        ;;
 
-    # 8. Upscalers
-    "$PWD/models/Upscaler/*" | "$PWD/models/ESRGAN/*")
+    # 8. Upscalers (RealESRGAN, SwinIR, HAT, etc.)
+    "$PWD/models/Upscaler/"* | "$PWD/models/ESRGAN/"* | "$PWD/models/SwinIR/"* | "$PWD/models/HAT/"*)
        download_with_progress "$target_path" "$source_url" "Upscaler Model" "$ENABLE_DOWNLOAD_UPSCALERS"
        ;;
 

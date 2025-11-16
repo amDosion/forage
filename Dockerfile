@@ -53,7 +53,7 @@ RUN echo "🔧 正在创建非 root 用户 webui..." && \
 # 🚩 设置工作目录 + 拷贝启动脚本
 # ===============================
 WORKDIR /app
-COPY run.sh.modified /app/run.sh
+COPY run.sh /app/run.sh
 RUN echo "🔧 正在创建工作目录并设置权限..." && \
     chmod +x /app/run.sh && \
     mkdir -p /app/webui && \

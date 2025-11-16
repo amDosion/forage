@@ -1,64 +1,44 @@
-# ======== 插件 extensions/ ========
-extensions/sd-forge-layerdiffuse,https://github.com/lllyasviel/sd-forge-layerdiffuse.git
-extensions/sd-webui-infinite-image-browsing,https://github.com/zanllp/sd-webui-infinite-image-browsing.git
-extensions/sd-webui-prompt-all-in-one,https://github.com/amDosion/sd-webui-prompt-all-in-one.git
-extensions/sd-webui-wd14-tagger,https://github.com/Akegarasu/sd-webui-wd14-tagger.git
-extensions/stable-diffusion-webui-localization-zh_Hans,https://github.com/hanamizuki-ai/stable-diffusion-webui-localization-zh_Hans.git
-extensions/ultimate-upscale-for-automatic1111,https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git
-extensions/adetailer,https://github.com/Bing-su/adetailer.git
-extensions/tagcomplete,https://github.com/DominikDoom/a1111-sd-webui-tagcomplete.git
+# ================================================================
+# Stable Diffusion WebUI Forge - Resources Configuration
+# Auto-generated from resources_config.py
+# ================================================================
 
-# ======== 新增插件 2025 ========
-extensions/sd-webui-decadetw-auto-prompt-llm,https://github.com/xlinx/sd-webui-decadetw-auto-prompt-llm.git
-extensions/sd-forge-ic-light,https://github.com/huchenlei/sd-forge-ic-light.git
-extensions/sd-forge-animatediff,https://github.com/continue-revolution/sd-forge-animatediff.git
+# ======== Extensions / 扩展插件 ========
+extensions/sd-webui-controlnet,https://github.com/Mikubill/sd-webui-controlnet.git
+extensions/sd-dynamic-prompts,https://github.com/adieyal/sd-dynamic-prompts.git
+extensions/sd-webui-regional-prompter,https://github.com/hako-mikan/sd-webui-regional-prompter.git
+extensions/a1111-sd-webui-tagcomplete,https://github.com/DominikDoom/a1111-sd-webui-tagcomplete.git
+extensions/stable-diffusion-webui-images-browser,https://github.com/AlUlkesh/stable-diffusion-webui-images-browser.git
+extensions/sd-civitai-browser-plus,https://github.com/BlafKing/sd-civitai-browser-plus.git
+extensions/sd-webui-decadetw-auto-prompt-llm,https://github.com/Decadetw/sd-webui-decadetw-auto-prompt-llm.git
 
-# ========== 主模型（SD 1.5） ==========
-models/Stable-diffusion/SD1.5/v1-5-pruned.safetensors,https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned.safetensors
-
-# ========== 主模型（SDXL） ==========
-models/Stable-diffusion/XL/sdxl-base-1.0.safetensors,https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors
-
-# ========== 主模型（FLUX） ==========
-models/Stable-diffusion/flux/flux-alpha.safetensors,https://huggingface.co/lllyasviel/flux1_dev/resolve/main/flux1-dev-fp8.safetensors
-
-# ========== VAE for FLUX ==========
-models/VAE/flux-ae.safetensors,https://huggingface.co/DarkWarren/flux-ae/resolve/main/ae.safetensors
-
-# ========== Text Encoder for FLUX ==========
-models/text_encoder/clip_l.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/clip_l.safetensors
-models/text_encoder/t5xxl_fp16.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp16.safetensors
-models/text_encoder/t5xxl_fp8_e4m3fn.safetensors,https://huggingface.co/lllyasviel/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn.safetensors
-
-# ======== ControlNet v1.1 模型（SD 1.5） ========
+# ======== ControlNet v1.1 模型（SD 1.5）========
 models/ControlNet/control_v11p_sd15_canny.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_canny.pth
-models/ControlNet/control_v11p_sd15_normalbae.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_normalbae.pth
-models/ControlNet/control_v11p_sd15_mlsd.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_mlsd.pth
-models/ControlNet/control_v11p_sd15_scribble.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_scribble.pth
-models/ControlNet/control_v11p_sd15_softedge.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_softedge.pth
-models/ControlNet/control_v11p_sd15_seg.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_seg.pth
+models/ControlNet/control_v11p_sd15_depth.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11f1p_sd15_depth.pth
 models/ControlNet/control_v11p_sd15_openpose.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_openpose.pth
 models/ControlNet/control_v11p_sd15_lineart.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_lineart.pth
-models/ControlNet/control_v11p_sd15s2_lineart_anime.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15s2_lineart_anime.pth
-models/ControlNet/control_v11e_sd15_shuffle.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11e_sd15_shuffle.pth
-models/ControlNet/control_v11e_sd15_ip2p.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11e_sd15_ip2p.pth
-models/ControlNet/control_v11p_sd15_inpaint.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_inpaint.pth
 models/ControlNet/control_v11f1p_sd15_tile.pth,https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11f1e_sd15_tile.pth
 
-# ======== ControlNet SDXL 模型 ========
-models/ControlNet/controlnet-canny-sdxl-v2.safetensors,https://huggingface.co/lyb888/xinsir_controlnet_collection_all/resolve/main/xinsir_controlnet-canny-sdxl_V2.safetensors?download=true
-models/ControlNet/controlnet-depth-sdxl-1.0.safetensors,https://huggingface.co/lyb888/xinsir_controlnet_collection_all/resolve/main/xinsir_controlnet_depth_sdxl_1.0.safetensors?download=true
-models/ControlNet/controlnet-openpose-sdxl-1.0.safetensors,https://huggingface.co/lyb888/xinsir_controlnet_collection_all/resolve/main/xinsir_controlnet-openpose-sdxl-1.0.safetensors?download=true
-models/ControlNet/controlnet-scribble-sdxl-1.0.safetensors,https://huggingface.co/lyb888/xinsir_controlnet_collection_all/resolve/main/xinsir_controlnet-scribble-sdxl-1.0.safetensors?download=true
-models/ControlNet/controlnet-tile-sdxl-1.0.safetensors,https://huggingface.co/lyb888/xinsir_controlnet_collection_all/resolve/main/xinsir_controlnet_tile_sdxl_1.0.safetensors?download=true
+# ======== ControlNet SDXL 模型（官方 HuggingFace 源）========
+# 推荐：优先下载 Union 模型（一个模型支持10+控制条件）
+models/ControlNet/controlnet-union-sdxl-1.0-promax.safetensors,https://huggingface.co/xinsir/controlnet-union-sdxl-1.0/resolve/main/diffusion_pytorch_model_promax.safetensors
+models/ControlNet/controlnet-canny-sdxl-1.0.safetensors,https://huggingface.co/diffusers/controlnet-canny-sdxl-1.0/resolve/main/diffusion_pytorch_model.fp16.safetensors
+models/ControlNet/controlnet-depth-sdxl-1.0.safetensors,https://huggingface.co/diffusers/controlnet-depth-sdxl-1.0/resolve/main/diffusion_pytorch_model.fp16.safetensors
+models/ControlNet/controlnet-tile-sdxl-1.0.safetensors,https://huggingface.co/xinsir/controlnet-tile-sdxl-1.0/resolve/main/diffusion_pytorch_model.safetensors
 
-# ======== ControlNet FLUX 模型 ========
-models/ControlNet/flux-canny-controlnet-v3.safetensors,https://huggingface.co/XLabs-AI/flux-controlnet-collections/resolve/main/flux-canny-controlnet-v3.safetensors
-models/ControlNet/flux-hed-controlnet-v3.safetensors,https://huggingface.co/XLabs-AI/flux-controlnet-collections/resolve/main/flux-hed-controlnet-v3.safetensors
-models/ControlNet/flux-depth-controlnet-v3.safetensors,https://huggingface.co/XLabs-AI/flux-controlnet-collections/resolve/main/flux-depth-controlnet-v3.safetensors
-models/ControlNet/flux-controlnet-union-pro.safetensors,https://huggingface.co/Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro/resolve/main/diffusion_pytorch_model.safetensors?download=true
-models/ControlNet/flux-controlnet-upscaler.safetensors,https://huggingface.co/jasperai/Flux.1-dev-Controlnet-Upscaler/resolve/main/diffusion_pytorch_model.safetensors?download=true
+# ======== VAE 模型 ========
+models/VAE/vae-ft-mse-840000-ema-pruned.safetensors,https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors
+models/VAE/sdxl_vae.safetensors,https://huggingface.co/stabilityai/sdxl-vae/resolve/main/sdxl_vae.safetensors
 
 # ======== Upscaler 模型 ========
+# 🎨 面料/服装细节超清放大专业推荐：
+# - SwinIR Large（细节最佳，质量9.7/10）
+# - HAT（真实照片最佳）
+# - Tile ControlNet + Ultimate SD Upscale（综合方案）
 models/ESRGAN/RealESRGAN_x4plus.pth,https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth
 models/ESRGAN/RealESRGAN_x4plus_anime_6B.pth,https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.1/RealESRGAN_x4plus_anime_6B.pth
+models/ESRGAN/RealESRGAN_x2plus.pth,https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth
+models/SwinIR/003_realSR_BSRGAN_DFOWMFC_s64w8_SwinIR-L_x4_GAN.pth,https://github.com/JingyunLiang/SwinIR/releases/download/v0.0/003_realSR_BSRGAN_DFOWMFC_s64w8_SwinIR-L_x4_GAN.pth
+models/SwinIR/003_realSR_BSRGAN_DFO_s64w8_SwinIR-M_x4_GAN.pth,https://github.com/JingyunLiang/SwinIR/releases/download/v0.0/003_realSR_BSRGAN_DFO_s64w8_SwinIR-M_x4_GAN.pth
+models/HAT/HAT_SRx4_ImageNet-pretrain.pth,https://github.com/XPixelGroup/HAT/releases/download/v1.0.0/HAT_SRx4_ImageNet-pretrain.pth
+models/ESRGAN/4x-UltraSharp.pth,https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth
